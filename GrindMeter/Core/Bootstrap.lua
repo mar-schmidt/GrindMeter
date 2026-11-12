@@ -11,6 +11,7 @@ local function initialize()
     G.Trackers:Reset()
     G.Session:Restore(GetTime())
     G.UI:Create(); G.Minimap:Create()
+    if G.Session:IsContinuous(G.Session.s) then G.UI.tab = "live" end
     G.Prices:Initialize()
     G.Session.OnStopped = function()
         G.Print(G.L("saved")); G.UI.view = nil; G.UI.newMode = nil; G.UI.revalued = nil
@@ -19,7 +20,8 @@ local function initialize()
     SLASH_GRINDMETER1 = "/grindmeter"; SLASH_GRINDMETER2 = "/gm"
     SlashCmdList.GRINDMETER = function(message)
         message = (message or ""):lower():match("^%s*(.-)%s*$")
-        if message == "hud" then G.UI.hud:SetShown(not G.UI.hud:IsShown()); G.UI:UpdateHUD()
+        if message == "live" then G.UI:StartContinuous()
+        elseif message == "hud" then G.UI:ToggleHUD()
         elseif message == "diagnostics" or message == "diag" then G.UI:CopyBox(G.Client:Diagnostics())
         elseif message == "reset" then
             G.Storage.settings.windowPosition = nil; G.Storage.settings.hudPosition = nil
@@ -64,7 +66,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
     G.Session:Tick(now); G.Trackers:FlushXP(now)
     if G.UI.hud:IsShown() then G.UI:UpdateHUD() end
     if G.UI.main:IsShown() and (G.UI.dirty or G.Session.s) then
-        if G.UI.tab == "measure" and G.UI.result:IsShown() and not G.UI.dirty then G.UI:UpdateResult()
+        if (G.UI.tab == "measure" or G.UI.tab == "live") and G.UI.result:IsShown() and not G.UI.dirty then G.UI:UpdateResult()
         else G.UI:Refresh() end
     end
 end)

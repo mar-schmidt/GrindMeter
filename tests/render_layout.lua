@@ -69,4 +69,24 @@ export(G.UI.main, "/tmp/grindmeter-result.json")
 export(G.UI.hud, "/tmp/grindmeter-hud.json")
 G.UI.lootTab = "possible"; G.UI:Refresh()
 export(G.UI.main, "/tmp/grindmeter-catalog.json")
-print("Exported 4 UI layout states to /tmp/grindmeter-*.json (synthetic data).")
+G = H.setup(true)
+G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
+G.UI.tab = "live"; G.UI:Toggle()
+export(G.UI.main, "/tmp/grindmeter-live-setup.json")
+GetLootSourceInfo = function() end -- The synthetic fixture supplies explicit source tuples below.
+G.UI:StartContinuous(); H.items[1688] = {name = "Long Soft Tail", vendor = 806, quality = 0}
+for i = 1, 10 do
+    H.at(i * 50)
+    local name = i <= 6 and "Wildplains Huntress" or "Wildplains Patriarch"
+    local guid = H.kill(G, i <= 6 and 259055 or 259054, i, name)
+    G.Trackers:XP(name .. " dies, you gain 200 experience.", i, H.clock)
+    local link = H.link(1688)
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 1), H.clock); G.Trackers:Receipt(link, 1, 100 + i, H.clock)
+    G.Trackers:ClearSlot(1); G.Trackers:CloseLoot(H.clock)
+end
+G.Session:Tick(H.at(600)); G.Trackers:FlushXP(600); G.UI:Refresh()
+export(G.UI.hud, "/tmp/grindmeter-live-hud.json")
+G.UI:Toggle(); export(G.UI.main, "/tmp/grindmeter-live-result.json")
+G.Storage.settings.language = "en"; G.UI:Refresh()
+export(G.UI.hud, "/tmp/grindmeter-live-hud-en.json")
+print("Exported 8 UI layout states to /tmp/grindmeter-*.json (synthetic data).")

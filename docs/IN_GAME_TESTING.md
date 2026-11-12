@@ -26,5 +26,6 @@ Installera testreleasen. Använd `/gm diagnostics` före och efter ett kort pass
 | 18 | Verklig lokal prisfil: import, reload, fel scope, gammal fil och omvärdering av historik utan att originalet ändras. | Ej speltestat |
 | 19 | Svenska UI:t i engelsk klient på Mac, engelskt UI, andra upplösningar/UI-skalor, dragpositioner och fyrkantig minimap. Kontrollera att Sortera: Kvalitet / Sort: Quality, inställningarnas på/av-markeringar, tomma värden och stängknappar visas utan fyrkanter. | Ej speltestat |
 | 20 | RestedXP och Auctionator aktiva, extern `/combatlog` av. Inga ändringar av andra addons inställningar. | Ej speltestat |
+| 21 | Löpande: starta utan target via flik och `/gm live`, döda flera mobtyper och kontrollera totalsiffrorna i den lilla panelen. Dölj huvudfönstret; värden/klocka ska fortsätta uppdateras. Vila, pausa/fortsätt, nollställ och stoppa. Förra perioden ska finnas i historiken, reload återställa pausat och ett aktivt fokuserat pass aldrig skrivas över. | Ej speltestat |
 
 För referenssekvensen i kravställningen: 600 sekunder, 6 Huntress och 9 Patriarch ska ge 36/h, 54/h och totalt 90/h. Detta test säger inget om mobbarnas faktiska XP, drop rates eller priser. Dokumentera verklig build, locale, group/solo, autoloot/manuell och eventprecision vid godkännande.

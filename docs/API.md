@@ -32,7 +32,13 @@ Monoton `GetTime()` används för mättid, `time()` för datum. Eventhandlaren f
 
 Paus stänger både klocka och rewardinsamling och rensar tillfälliga källkontexter. En kropp från före pausen kan därför få osäker källa efter återupptagning. Offline-tid inkluderas inte efter normal logout/reload. Fördröjd itemmetadata och Auctionators databasnotifiering får uppdatera aktiva/pausade pass utan att ändra tid eller mottagna mängder. Avslutade pass omprissätts endast i en uttryckligen vald alternativ vy.
 
-Körande sessionsdata håller högst 4 096 kill-GUID:n, 100 färska XP-kandidater, 1 024 chattdedupliceringsnycklar och sex lootkontexter. En session avslutas vid 8 192 itemreceipts. Gamla borttagna killkällor kan ge okänd lootkälla. Rå combatlog sparas inte. UI/timer uppdateras högst fyra gånger per sekund, med händelsestyrda itemuppslag och ingen bag-/AH-skanning per frame.
+Körande sessionsdata håller högst 4 096 kill-GUID:n, 100 färska XP-kandidater, 1 024 chattdedupliceringsnycklar och sex lootkontexter. En fokuserad session avslutas vid 8 192 itemreceipts. Löpande sessioner summerar upprepade receipts per exakt itemvariant/NPC-källa/kategori; gränsen gäller då 8 192 skilda grupper. Det är ett minnesskydd, inte en förvald stopptid. Äldre kroppsobservationer i löpande läge lärs och tas bort när deras kill-GUID lämnar cachen. Gamla borttagna killkällor kan ge okänd lootkälla. Rå combatlog sparas inte. UI/timer uppdateras högst fyra gånger per sekund, med händelsestyrda itemuppslag och ingen bag-/AH-skanning per frame.
+
+## Löpande läge
+
+`Session:StartContinuous` skapar `mode = "continuous"`, `duration = 0` och den interna markören `selectedNpcID = 0`. Noll är inte ett riktigt NPC-ID, används aldrig som lootkälla och får ingen fabricerad counter. `PrimaryNPC` ger nil för beräkning över alla verkliga NPC-räknare; historiska sessioner utan mode behåller tidigare beteende. Samma attribution, mob-XP-regler och värdering används i båda lägena. Quest-XP och osäkra lootkällor blir inte mobinkomst.
+
+Panelen visar snitt sedan start med samma uppmätta sekundnämnare för G/h och mob-XP/h. Explicit paus exkluderar både tid och insamling; dolda fönster pausar aldrig. Nollställ avslutar/sparar föregående period och startar en ny, med bibehållet pausläge. Reload återställer aktiv session pausad. Det går aldrig att starta ett andra pass över ett aktivt.
 
 ## Språk och faktisk verifiering
 

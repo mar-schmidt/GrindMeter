@@ -24,13 +24,13 @@ function M:Create()
     local border = b:CreateTexture(nil, "OVERLAY"); border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder"); border:SetSize(54, 54); border:SetPoint("TOPLEFT", 0, 0)
     b:SetScript("OnClick", function(_, mouse)
         if self.dragged then self.dragged = nil; return end
-        if mouse == "RightButton" then G.UI.hud:SetShown(not G.UI.hud:IsShown()); G.UI:UpdateHUD()
+        if mouse == "RightButton" then G.UI:ToggleHUD()
         else G.UI:Toggle() end
     end)
     b:SetScript("OnEnter", function()
         GameTooltip:SetOwner(b, "ANCHOR_LEFT"); GameTooltip:SetText("GrindMeter", .88, .71, .4)
         local s = G.Session.s
-        if s then GameTooltip:AddLine(s.selectedName .. " - " .. G.L(s.state == "running" and "running" or "paused"), 1, 1, 1) end
+        if s then GameTooltip:AddLine(G.UI:SessionName(s) .. " - " .. G.L(s.state == "running" and "running" or "paused"), 1, 1, 1) end
         GameTooltip:AddLine(G.L("miniHint"), .8, .85, .9, true); GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)

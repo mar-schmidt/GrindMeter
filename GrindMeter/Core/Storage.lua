@@ -13,6 +13,9 @@ local function valid(session)
         and type(session.unattributedLoot) == "number" and type(session.unattributedMoney) == "number"
         and type(session.diagnosticsSummary) == "table" and type(session.fee) == "number"
     if not base then return false end
+    if session.mode ~= nil and session.mode ~= "mob" and session.mode ~= "continuous" then return false end
+    if session.mode == "continuous" and (session.selectedNpcID ~= 0 or session.duration ~= 0) then return false end
+    if session.mode ~= "continuous" and session.selectedNpcID <= 0 then return false end
     for id, counter in pairs(session.countersByNpcID) do
         if type(id) ~= "number" or type(counter) ~= "table" or type(counter.kills) ~= "number"
             or type(counter.xp) ~= "number" or type(counter.name) ~= "string" then return false end

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — 2026-11-12
+
+- Ny flik Löpande och `/gm live`: start utan vald mob eller förvald stopptid, med gemensamt snitt för alla säkert registrerade mobbar sedan start.
+- Flyttbar panel på 308 × 216 UI-pixlar med stora separata G/h- och mob-XP/h-värden, klocka och synlig värderingsmetod. Uppdateras även med huvudfönstret stängt.
+- Pausa/Fortsätt, Nollställ och Stoppa i panelen. Nollställ sparar föregående period i historiken och bevarar pausläget. Klick på värderingen växlar Vendor/AH.
+- Båda lägena delar samma säkra insamling. Endast ett pass åt gången; växling skriver inte över en aktiv mätning. Reload återställer pausat och räknar inte offline-tid.
+- Historik, rapport och mobfördelning visar korrekta totaler för löpande pass. Intern all-mob-markör skapar aldrig en fabricerad NPC-räknare eller mobkälla.
+- Återkommande loot summeras per exakt variant/källa/kategori i löpande läge. Äldre kroppsobservationer lärs en gång och lämnar cachen, så vanliga långa pass håller begränsad detaljdata.
+- Tio nya regressionstester: totalt 74 Lua-tester och 3 Python-tester. Svensk/engelsk panel och huvudvyer är granskade i simulerad layout; in-game-verifiering återstår.
+
 ## 0.1.3 — 2026-11-12
 
 - Ersätter stjärnan efter Sortera med den utskrivna etiketten Kvalitet / Quality.

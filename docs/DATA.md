@@ -71,4 +71,6 @@ En validerad import används först; annars provas Auctionator. Fel scope avvisa
 
 ## Historik
 
+Löpande perioder lagras med `mode = "continuous"`, intern all-mob-markör 0 och duration 0. Äldre sessioner utan mode förblir fokuserade mobpass. Nollställ sparar en avslutad period och börjar en ny; historikgränsen är fortsatt 50 pass. I löpande läge är lootreceipt-rader summeringar per exakt variant/NPC-källa/kategori med antal mottagningar och eventuell sista eventtid, inte en lista över alla kroppars GUID:n. Okänd källa hålls i en separat grupp. Ingen mängd eller intäkt skapas genom summeringen.
+
 Receipts och XP-antal är separata från värderingar. Avslut låser `priceSnapshot` och avgift; statisk itemmetadata får laddas senare. `Nya priser` gör en tillfällig alternativ värdering och märker den i UI utan att ändra sparat original. En ändrad avgift gäller nya pass. Priser och source-meta blandas inte mellan pristyper. Ingen avgiftsavrundning påstås motsvara en verifierad AH-avräkning: modellen behåller fraktionell koppar till slutpresentationen.

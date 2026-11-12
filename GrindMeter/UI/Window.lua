@@ -10,6 +10,47 @@ end
 function U:ActiveView()
     return self.view or G.Session.s or G.Session.last
 end
+function U:SessionName(session)
+    return G.Session:IsContinuous(session) and G.L("allMobs") or session.selectedName
+end
+function U:OpenSession(session)
+    if not session then return end
+    self.view = session; self.revalued = nil; self.newMode = nil
+    self.tab = G.Session:IsContinuous(session) and "live" or "measure"
+    self:Refresh(); self.main:Show()
+end
+function U:ToggleHUD()
+    if not G.Session.s and not G.Session.last then
+        self.tab = "live"; self:Refresh(); self.main:Show(); return
+    end
+    self.hud:SetShown(not self.hud:IsShown()); self:UpdateHUD()
+end
+function U:StartContinuous()
+    local active = G.Session.s
+    if active and not G.Session:IsContinuous(active) then
+        self.liveError = nil; self.tab = "live"; self:Refresh(); self.main:Show(); return false
+    end
+    if not active then
+        local context = G.Client:Context()
+        if context.gameFlavor ~= "forever" then self.liveError = "WoW Forever (Interface 16000-16999)"; self:Refresh(); return false end
+        local ok, reason = G.Session:StartContinuous(context, GetTime(), time())
+        if not ok then self.liveError = G.L(reason); self:Refresh(); return false end
+        G.Trackers:XPDelta(UnitXP("player"), UnitXPMax("player"), UnitLevel("player"), GetTime())
+    end
+    self.view = nil; self.newMode = nil; self.revalued = nil; self.liveError = nil; self.tab = "live"
+    G.Storage.settings.showHUD = true
+    self:Refresh(); self.main:Hide(); self.hud:Show()
+    return true
+end
+function U:ResetContinuous()
+    local s = G.Session.s
+    if not G.Session:IsContinuous(s) then return false end
+    local paused = s.state == "paused"
+    G.Session:Stop(GetTime(), time(), "resetPeriod")
+    if not self:StartContinuous() then return false end
+    if paused then G.Session:Pause(GetTime()) end
+    self:Refresh(); return true
+end
 function U:ChooseTarget()
     if G.Session.s then G.Print(G.L("alreadyRunning")); return end
     local selection = G.Client:Selection()
@@ -23,7 +64,7 @@ function U:Start()
     local ok, reason = G.Session:Start(self.selection, context, GetTime(), time())
     if not ok then self.setupError = G.L(reason); self:Refresh(); return end
     G.Trackers:XPDelta(UnitXP("player"), UnitXPMax("player"), UnitLevel("player"), GetTime())
-    self.view = nil; self.revalued = nil; self.newMode = nil; self.setupError = nil
+    self.view = nil; self.revalued = nil; self.newMode = nil; self.setupError = nil; self.tab = "measure"
     self:Refresh()
     if G.Storage.settings.showHUD then self.hud:Show() end
 end
@@ -39,8 +80,12 @@ function U:Create()
     self.subtitle = label(frame, "subtitle", 65, 43, 11, W.colors.muted)
     self.close = W.Place(W.Button(frame, "x", 30, 30, function() frame:Hide() end), 809, 20)
     self.nav = {}
-    for i, key in ipairs({"measure", "history", "settings"}) do
-        self.nav[key] = button(frame, key, 20 + (i - 1) * 171, 76, 161, function()
+    for i, key in ipairs({"measure", "live", "history", "settings"}) do
+        self.nav[key] = button(frame, key, 20 + (i - 1) * 207, 76, 199, function()
+            if G.Session.s and (key == "live" and G.Session:IsContinuous(G.Session.s)
+                or key == "measure" and not G.Session:IsContinuous(G.Session.s)) then
+                self.view = nil; self.newMode = nil; self.revalued = nil
+            end
             self.tab = key; self.deleteArmed = nil; self:Refresh()
         end)
     end
@@ -48,9 +93,21 @@ function U:Create()
     self.result = CreateFrame("Frame", nil, frame); self.result:SetAllPoints()
     self.history = CreateFrame("Frame", nil, frame); self.history:SetAllPoints()
     self.settings = CreateFrame("Frame", nil, frame); self.settings:SetAllPoints()
-    self:CreateSetup(); self:CreateResult(); self:CreateHistory(); self:CreateSettings(); self:CreateHUD()
+    self.liveSetup = CreateFrame("Frame", nil, frame); self.liveSetup:SetAllPoints()
+    self:CreateSetup(); self:CreateLiveSetup(); self:CreateResult(); self:CreateHistory(); self:CreateSettings(); self:CreateHUD()
     self.footer = W.Place(W.Text(frame, "", 9, W.colors.muted, 818), 22, 676)
     frame:Hide()
+end
+function U:CreateLiveSetup()
+    local p = self.liveSetup
+    self.liveHeading = label(p, "liveTitle", 38, 153, 26, W.colors.text, 780)
+    self.liveIntro = label(p, "liveIntro", 38, 209, 15, W.colors.muted, 770)
+    local info = W.Place(W.Panel(p, 784, 131), 38, 295)
+    self.liveScope = label(info, "liveScope", 18, 18, 15, W.colors.gold, 748)
+    self.liveHint = label(info, "liveHint", 18, 54, 13, W.colors.text, 742)
+    self.liveStartButton = button(p, "liveStart", 38, 451, 320, function() self:StartContinuous() end, true, 48)
+    self.liveNotice = label(p, "liveControls", 38, 521, 13, W.colors.muted, 770)
+    self.livePricing = label(p, "livePricing", 38, 588, 11, W.colors.muted, 770)
 end
 function U:CreateSetup()
     local p = self.setup
@@ -109,11 +166,13 @@ function U:CreateResult()
     end)
     self.stopButton = button(p, "stop", 172, 628, 207, function() G.Session:Stop(GetTime(), time(), "manual"); self.view = nil; self:Refresh() end, true)
     self.newButton = button(p, "new", 20, 628, 219, function()
-        local s = self:ActiveView(); self.selection = {npcID = s.selectedNpcID, name = s.selectedName, zoneName = s.zoneName, mapID = s.mapID}
+        local s = self:ActiveView()
+        if G.Session:IsContinuous(s) then self:StartContinuous(); return end
+        self.selection = {npcID = s.selectedNpcID, name = s.selectedName, zoneName = s.zoneName, mapID = s.mapID}
         self.view = nil; self.newMode = true; self.revalued = nil; self:Refresh()
     end, true)
     self.otherButton = button(p, "otherTarget", 251, 628, 165, function()
-        self.view = nil; self.selection = nil; self.newMode = true; self.revalued = nil; self:Refresh()
+        self.view = nil; self.selection = nil; self.newMode = true; self.revalued = nil; self.tab = "measure"; self:Refresh()
     end)
     self.exportButton = button(p, "export", 583, 628, 257, function() self:CopyBox(self:Summary(self:ActiveView())) end)
     self.revalueButton = button(p, "revalueShort", 428, 628, 145, function()
@@ -146,7 +205,7 @@ function U:CreateHistory()
         else self.deleteArmed = self.historySelected.id; self.historyDelete:SetText(G.L("deleteConfirm")) end
     end)
     self.historyDetail = W.Place(W.Button(p, "", 540, 32, function()
-        if self.historySelected then self.view = self.historySelected; self.revalued = nil; self.newMode = nil; self.tab = "measure"; self:Refresh() end
+        if self.historySelected then self:OpenSession(self.historySelected) end
     end), 299, 625)
 end
 function U:CreateSettings()
@@ -185,40 +244,59 @@ function U:CreateSettings()
     self.diagnosticHint = label(p, "diagnosticHint", 22, 610, 11, W.colors.muted, 780)
 end
 function U:CreateHUD()
-    self.hud = W.Panel(UIParent, 308, 190, W.colors.bg)
+    self.hud = W.Panel(UIParent, 308, 216, W.colors.bg)
     local h = self.hud; h:SetFrameStrata("MEDIUM"); W.Position(h, "hudPosition", "TOPLEFT", 40, -210)
     local handle = CreateFrame("Frame", nil, h); handle:SetSize(270, 31); handle:SetPoint("TOPLEFT")
     W.Draggable(h, handle, "hudPosition")
-    W.Place(W.Text(h, "GrindMeter", 12, W.colors.gold), 12, 12)
+    W.Place(W.Text(h, "GrindMeter", 12, W.colors.gold, 230), 12, 12)
     self.hudClose = W.Place(W.Button(h, "x", 24, 24, function() h:Hide() end), 277, 5)
     W.Tooltip(self.hudClose, G.L("minimize"))
-    self.hudMob = W.Place(W.Text(h, "", 15, W.colors.text, 282), 12, 40)
-    self.hudTime = W.Place(W.Text(h, "", 11, W.colors.muted, 282), 12, 65)
-    self.hudNumbers = W.Place(W.Text(h, "", 13, W.colors.text, 282), 12, 89)
-    self.hudMethod = W.Place(W.Text(h, "", 10, W.colors.muted, 282), 12, 122)
-    self.hudPause = button(h, "pause", 12, 148, 126, function()
-        if not G.Session.s then self.tab = "measure"; self.view = nil; self.newMode = nil; self:Refresh(); self.main:Show(); return end
+    self.hudMob = W.Place(W.Text(h, "", 12, W.colors.text, 282), 12, 36)
+    self.hudTime = W.Place(W.Text(h, "", 10, W.colors.muted, 282), 12, 57)
+    self.hudGoldTitle = W.Place(W.Text(h, "G / h", 10, W.colors.gold, 138), 12, 80)
+    self.hudXPTitle = label(h, "liveXP", 161, 80, 10, W.colors.teal, 135)
+    self.hudGold = W.Place(W.Text(h, "-", 23, W.colors.text, 138), 12, 94)
+    self.hudXP = W.Place(W.Text(h, "-", 23, W.colors.text, 135), 161, 94)
+    self.hudMethod = W.Place(W.Button(h, "", 284, 23, function()
+        G.Storage.settings.method = G.Storage.settings.method == "vendor" and "best" or "vendor"; self:Refresh()
+    end), 12, 128)
+    W.Tooltip(self.hudMethod, G.L("livePricing"))
+    self.hudNote = W.Place(W.Text(h, "", 9, W.colors.muted, 284), 12, 156)
+    self.hudPause = button(h, "pause", 12, 178, 84, function()
+        if not G.Session.s then self:OpenSession(G.Session.last); return end
         if G.Session.s.state == "running" then G.Session:Pause(GetTime()) else G.Session:Resume(GetTime()) end
         self:Refresh()
-    end)
-    self.hudStop = button(h, "stop", 149, 148, 147, function()
+    end, false, 26)
+    self.hudReset = button(h, "resetPeriod", 104, 178, 94, function() self:ResetContinuous() end, false, 26)
+    W.Tooltip(self.hudReset, G.L("resetPeriodHint"))
+    self.hudStop = button(h, "stopShort", 206, 178, 90, function()
         if G.Session.s then G.Session:Stop(GetTime(), time(), "manual")
         else self.tab = "history"; self.main:Show() end
         self:Refresh()
-    end)
+    end, false, 26)
     h:Hide()
 end
 function U:Refresh()
     if not self.main then return end
-    for _, key in ipairs({"measure", "history", "settings"}) do self.nav[key]:SetText(G.L(key)); self.nav[key]:SetSelected(self.tab == key) end
+    for _, key in ipairs({"measure", "live", "history", "settings"}) do self.nav[key]:SetText(G.L(key)); self.nav[key]:SetSelected(self.tab == key) end
     self.subtitle:SetText(G.L("subtitle"))
-    self.setup:Hide(); self.result:Hide(); self.history:Hide(); self.settings:Hide()
+    self.setup:Hide(); self.result:Hide(); self.history:Hide(); self.settings:Hide(); self.liveSetup:Hide()
     self.footer:SetText(G.L("beforeCosts") .. "\n" .. G.L("diagnosticsWarning") .. "  -  " .. G.L("extrapolated"))
     if self.tab == "history" then self.history:Show(); self:UpdateHistory()
     elseif self.tab == "settings" then self.settings:Show(); self:UpdateSettings()
-    elseif self:ActiveView() and (not self.newMode or G.Session.s) then self.result:Show(); self:UpdateResult(); self:UpdateLoot()
+    elseif self.tab == "live" then
+        if G.Session:IsContinuous(self:ActiveView()) then self.result:Show(); self:UpdateResult(); self:UpdateLoot()
+        else self.liveSetup:Show(); self:UpdateLiveSetup() end
+    elseif self:ActiveView() and not G.Session:IsContinuous(self:ActiveView()) and (not self.newMode or G.Session.s) then self.result:Show(); self:UpdateResult(); self:UpdateLoot()
     else self.setup:Show(); self:UpdateSetup() end
     self:UpdateHUD(); self.dirty = false
+end
+function U:UpdateLiveSetup()
+    self.liveHeading:SetText(G.L("liveTitle")); self.liveIntro:SetText(G.L("liveIntro"))
+    self.liveScope:SetText(G.L("liveScope")); self.liveHint:SetText(G.L("liveHint"))
+    self.liveStartButton:SetText(G.L("liveStart")); W.Enable(self.liveStartButton, not G.Session.s)
+    self.liveNotice:SetText(G.Session.s and G.L("alreadyRunning") or self.liveError or G.L("liveControls"))
+    self.livePricing:SetText(G.L("livePricing"))
 end
 function U:UpdateSetup()
     local selection = self.selection
@@ -226,24 +304,26 @@ function U:UpdateSetup()
     self.targetName:SetText(selection and selection.name or G.L("choose"))
     self.targetMeta:SetText(selection and "NPC " .. selection.npcID .. "  -  " .. (selection.zoneName or "") or "")
     self.targetHint:SetText(self.setupError or G.L(selection and "selectedHint" or "selectHint"))
-    self.targetButton:SetText(G.L("select")); self.startButton:SetText(G.L("start")); W.Enable(self.startButton, selection ~= nil)
+    self.targetButton:SetText(G.L("select")); self.startButton:SetText(G.L("start")); W.Enable(self.startButton, selection ~= nil and not G.Session.s)
     self.durationHeading:SetText(G.L("step2")); self.timeHint:SetText(G.L("timeHint")); self.startHeading:SetText(G.L("step3"))
     self.startHint:SetText(G.L("startHint")); self.setupHelp:SetText(G.L("ahHelp"))
     for seconds, b in pairs(self.durations) do
         b:SetText(seconds == 0 and G.L("manual") or seconds / 60 .. " " .. G.L("min")); b:SetSelected(G.Storage.settings.duration == seconds)
     end
     local entries = selection and G.Catalog:Get(selection.npcID) or {}
-    self.setupNotice:SetText(self.setupError or (selection and (#entries > 0 and G.L("catalogCount", #entries) or G.L("missingCatalog")) or G.L("selectHint")))
+    self.setupNotice:SetText(G.Session.s and G.L("alreadyRunning") or self.setupError or (selection and (#entries > 0 and G.L("catalogCount", #entries) or G.L("missingCatalog")) or G.L("selectHint")))
 end
 function U:UpdateResult()
     local s = self:ActiveView(); if not s then return end
     G.Prices:FillItemData(s)
     local method = G.Storage.settings.method
-    local m = G.Calculator.Metrics(s, s.selectedNpcID, method, self.revalued)
+    local continuous, primary = G.Session:IsContinuous(s), G.Session:PrimaryNPC(s)
+    local scope = G.L(continuous and "allMobs" or "selectedMob")
+    local m = G.Calculator.Metrics(s, primary, method, self.revalued)
     local total = G.Calculator.Metrics(s, nil, method, self.revalued)
-    self.mobName:SetText(s.selectedName)
+    self.mobName:SetText(self:SessionName(s))
     self.status:SetText(G.L(s.state == "running" and "running" or s.state == "paused" and "paused" or "finished"))
-    self.meta:SetText("NPC " .. s.selectedNpcID .. "  -  " .. (s.zoneName or "") .. "  -  " .. F.Date(s.startedAt)
+    self.meta:SetText((continuous and G.L("liveScope") or "NPC " .. s.selectedNpcID) .. "  -  " .. (s.zoneName or "") .. "  -  " .. F.Date(s.startedAt)
         .. "  -  Lv " .. s.levelStart .. (s.levelEnd and s.levelEnd ~= s.levelStart and " > " .. s.levelEnd or "")
         .. "  -  " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. (s.groupChanged and " - " .. G.L("groupChanged") or ""))
     local timing = G.L("measured") .. " " .. F.Time(s.measuredSeconds)
@@ -251,17 +331,17 @@ function U:UpdateResult()
     if s.pausedSeconds > 0 then timing = timing .. "  -  " .. G.L("pausedTime") .. " " .. F.Time(s.pausedSeconds) end
     self.timing:SetText(timing); self.progressFill:SetWidth(math.max(1, s.duration > 0 and 816 * math.min(1, s.measuredSeconds / s.duration) or 816))
     local c = self.cards
-    c[1].title:SetText(G.L("selectedMob") .. " - " .. G.L("killsHour")); c[1].number:SetText(F.Number(m.killsHour))
+    c[1].title:SetText(scope .. " - " .. G.L("killsHour")); c[1].number:SetText(F.Number(m.killsHour))
     c[1].detail:SetText(m.kills .. " " .. G.L("kills") .. " - " .. F.Number(m.secondsKill) .. " s/kill")
     c[2].title:SetText(G.L("xpHour") .. (m.xpPartial and " - " .. G.L("partial") or "")); c[2].number:SetText(F.Number(m.xpHour))
     c[2].detail:SetText((s.xpAvailable and m.xp or G.L("unknown")) .. " " .. G.L("totalXP") .. " - " .. G.L("restedStart") .. " " .. tostring(s.restedInfo or 0))
     c[3].title:SetText(G.L("valueHour") .. (m.valuation.partial and " - " .. G.L("partial") or "")); c[3].number:SetText(F.Gold(m.valuation.rate))
     c[3].detail:SetText(G.L(method) .. (self.revalued and " - " .. G.L("revaluedShort") or ""))
-    local vendor = G.Calculator.Value(s, s.selectedNpcID, "vendor", self.revalued)
-    local best = G.Calculator.Value(s, s.selectedNpcID, "best", self.revalued)
+    local vendor = G.Calculator.Value(s, primary, "vendor", self.revalued)
+    local best = G.Calculator.Value(s, primary, "best", self.revalued)
     self.totals:SetText(G.L("wholeSession") .. ((total.xpPartial or total.valuation.partial) and " (" .. G.L("partial") .. ")" or "") .. ":  " .. total.kills .. " kills  -  " .. F.Number(total.killsHour) .. " kills/h  -  "
         .. F.Number(total.xpHour) .. " XP/h  -  " .. F.Gold(total.valuation.rate) .. " G/h\n"
-        .. G.L("selectedMob") .. ": " .. G.L("coins") .. " " .. F.Money(m.valuation.coins)
+        .. scope .. ": " .. G.L("coins") .. " " .. F.Money(m.valuation.coins)
         .. " - " .. G.L("vendor") .. " " .. F.Gold(vendor.rate) .. " G/h - " .. G.L("best") .. " " .. F.Gold(best.rate) .. " G/h"
         .. ((vendor.partial or best.partial) and " - " .. G.L("partial") or "")
         .. (s.unattributedMoney > 0 and "\n" .. G.L("unknownCoins") .. ": " .. F.Money(s.unattributedMoney) or ""))
@@ -276,7 +356,7 @@ function U:UpdateResult()
     self.pauseButton:SetShown(active); self.stopButton:SetShown(active); self.newButton:SetShown(not active); self.otherButton:SetShown(not active)
     W.Enable(self.newButton, not G.Session.s); W.Enable(self.otherButton, not G.Session.s)
     self.pauseButton:SetText(G.L(s.state == "paused" and "resume" or "pause")); self.stopButton:SetText(G.L("stop"))
-    self.newButton:SetText(G.L("new")); self.otherButton:SetText(G.L("otherTarget")); self.exportButton:SetText(G.L("export"))
+    self.newButton:SetText(G.L(continuous and "liveAgain" or "new")); self.otherButton:SetText(G.L(continuous and "mobMeasure" or "otherTarget")); self.exportButton:SetText(G.L("export"))
     self.revalueButton:SetShown(not active); self.revalueButton:SetText(G.L("revalueShort"))
     self.methodSwitch:SetShown(active); self.methodSwitch:SetText(G.L(G.Storage.settings.method))
 end
@@ -353,7 +433,7 @@ function U:LootRow(index)
             GameTooltip:AddDoubleLine(G.L("chosenTotal", via, b.quantity), F.Money(b.total), .88, .71, .4, 1, 1, 1)
             GameTooltip:AddLine(G.L("totalNotHourly"), .65, .7, .8, true)
             if not row.data.sourceNpcID then GameTooltip:AddLine(G.L("excludedUnknown"), 1, .65, .3, true)
-            elseif row.data.sourceNpcID ~= session.selectedNpcID then GameTooltip:AddLine(G.L("otherMobValue"), .65, .7, .8, true) end
+            elseif not G.Session:IsContinuous(session) and row.data.sourceNpcID ~= session.selectedNpcID then GameTooltip:AddLine(G.L("otherMobValue"), .65, .7, .8, true) end
         end
         GameTooltip:AddLine(G.L("linkHint"), .6, .7, .8, true)
         GameTooltip:Show()
@@ -363,7 +443,9 @@ function U:LootRow(index)
 end
 function U:UpdateLoot()
     local s = self:ActiveView(); if not s then return end
-    for key, b in pairs(self.lootTabs) do b:SetText(G.L(key)); b:SetSelected(key == self.lootTab) end
+    for key, b in pairs(self.lootTabs) do
+        b:SetText(G.L(key == "other" and G.Session:IsContinuous(s) and "liveMobs" or key)); b:SetSelected(key == self.lootTab)
+    end
     self.sortButton:SetText(G.L("sort") .. ": " .. G.L(self.sort))
     local rows, coverage = self:Rows(s)
     local prices = self.revalued or s.priceSnapshot
@@ -402,6 +484,7 @@ function U:UpdateLoot()
         self.lootEmpty:SetText(G.L("catalogPartial") .. "\n" .. (hasCommunity and G.L("catalogCredit", G.Catalog.community.dataAsOf:sub(1, 10)) or G.L("localBias")) .. "\n" .. forecastText)
     end
     if self.lootTab == "possible" and #rows == 0 then self.lootEmpty:SetText(G.L("missingCatalog") .. "\n\n" .. G.L("forecastMissing")) end
+    if self.lootTab == "possible" and G.Session:IsContinuous(s) then self.lootEmpty:SetText(G.L("liveCatalog")) end
     for i, data in ipairs(rows) do
         local row = self:LootRow(i); W.Place(row, 0, offset + (i - 1) * 57); row:Show(); row.data = data; row.price = data.price
         row.link:SetShown(data.itemID ~= nil); row.link:SetText(G.L("link"))
@@ -433,7 +516,7 @@ function U:UpdateHistory()
     W.Enable(self.historyDelete, self.historySelected ~= nil); W.Enable(self.historyDetail, self.historySelected ~= nil)
     local filter = self.filter:GetText():lower(); local rows = {}
     for _, s in ipairs(G.Storage.character.history) do
-        if filter == "" or s.selectedName:lower():find(filter, 1, true) or tostring(s.selectedNpcID):find(filter, 1, true) then rows[#rows + 1] = s end
+        if filter == "" or self:SessionName(s):lower():find(filter, 1, true) or tostring(s.selectedNpcID):find(filter, 1, true) then rows[#rows + 1] = s end
     end
     for _, row in ipairs(self.historyRows) do row:Hide() end
     self.historyEmpty:SetText(G.L("noHistory")); self.historyEmpty:SetShown(#rows == 0)
@@ -448,10 +531,10 @@ function U:UpdateHistory()
             self.historyRows[i] = row
         end
         row.session = s; W.Place(row, 0, (i - 1) * 76); row:Show(); row:SetSelected(self.historySelected == s)
-        local m = G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method)
+        local m = G.Calculator.Metrics(s, G.Session:PrimaryNPC(s), G.Storage.settings.method)
         local priceDate
         for _, p in pairs(s.priceSnapshot) do if p.ah and (not priceDate or p.ah.observedAt < priceDate) then priceDate = p.ah.observedAt end end
-        row.title:SetText(s.selectedName .. "  -  " .. F.Time(s.measuredSeconds) .. "  -  " .. F.Number(m.killsHour) .. " kills/h  -  " .. F.Number(m.xpHour) .. " XP/h  -  " .. F.Gold(m.valuation.rate) .. " G/h")
+        row.title:SetText(self:SessionName(s) .. "  -  " .. F.Time(s.measuredSeconds) .. "  -  " .. F.Number(m.killsHour) .. " kills/h  -  " .. F.Number(m.xpHour) .. " XP/h  -  " .. F.Gold(m.valuation.rate) .. " G/h")
         row.detail:SetText(F.Date(s.startedAt) .. " - Lv " .. s.levelStart .. " - " .. G.L("restedStart") .. " " .. (s.restedInfo or 0)
             .. " - " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. " - AH " .. (priceDate and F.Date(priceDate) or "-") .. ((m.valuation.partial or m.xpPartial) and " - " .. G.L("partial") or ""))
     end
@@ -471,14 +554,24 @@ end
 function U:UpdateHUD()
     local s = G.Session.s or G.Session.last
     if not s then return end
-    local m = G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method)
-    self.hudMob:SetText(s.selectedName)
+    local continuous = G.Session:IsContinuous(s)
+    local m = G.Calculator.Metrics(s, G.Session:PrimaryNPC(s), G.Storage.settings.method)
+    self.hudMob:SetText(continuous and G.L("liveScope") or self:SessionName(s))
     self.hudTime:SetText(G.L(s.state == "running" and "running" or s.state == "paused" and "paused" or "finished") .. " - " .. F.Time(s.measuredSeconds)
         .. (s.duration > 0 and " / " .. F.Time(s.duration) or ""))
-    self.hudNumbers:SetText(F.Number(m.killsHour) .. " kills/h   -   " .. F.Number(m.xpHour) .. " XP/h\n" .. F.Gold(m.valuation.rate) .. " G/h - " .. G.L("value"))
-    self.hudMethod:SetText(G.L(G.Storage.settings.method) .. ((m.valuation.partial or m.xpPartial) and " - " .. G.L("partial") or ""))
-    self.hudPause:SetText(G.L(s.state == "paused" and "resume" or s.state == "running" and "pause" or "measure"))
-    self.hudStop:SetText(G.L(s.state == "finished" and "history" or "stop"))
+    self.hudGold:SetText(F.Gold(m.valuation.rate)); self.hudXP:SetText(F.Number(m.xpHour))
+    self.hudXPTitle:SetText(G.L("liveXP")); self.hudMethod:SetText(G.L("value") .. ": " .. G.L(G.Storage.settings.method))
+    local partial = m.valuation.partial or m.xpPartial or not s.killAvailable or not s.xpAvailable
+    self.hudNote:SetText(partial and G.L("liveSubtotal") or G.Storage.settings.method ~= "vendor" and m.valuation.ahMissing > 0 and G.L("ahMissingCount", m.valuation.ahMissing)
+        or m.preliminary and G.L("preliminary") or G.L("sinceStart"))
+    self.hudPause:SetText(G.L(s.state == "paused" and "resume" or s.state == "running" and "pause" or "details"))
+    self.hudStop:SetText(G.L(s.state == "finished" and "history" or "stopShort"))
+    self.hudReset:SetText(G.L("resetPeriod")); self.hudReset:SetShown(continuous and G.Session.s == s)
+    W.Tooltip(self.hudReset, G.L("resetPeriodHint")); W.Tooltip(self.hudMethod, G.L("livePricing")); W.Tooltip(self.hudClose, G.L("minimize"))
+    local resetShown = continuous and G.Session.s == s
+    self.hudPause:SetWidth(resetShown and 84 or 134); self.hudPause.label:SetWidth(resetShown and 72 or 122)
+    self.hudStop:SetWidth(resetShown and 90 or 142); self.hudStop.label:SetWidth(resetShown and 78 or 130)
+    W.Place(self.hudStop, resetShown and 206 or 154, 178)
 end
 function U:CopyBox(text)
     if not self.copy then
@@ -495,8 +588,8 @@ function U:CopyBox(text)
 end
 function U:Summary(s)
     if not s then return "GrindMeter " .. G.version end
-    local m = G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method, self.revalued)
-    return F.Plain(table.concat({"GrindMeter " .. G.version .. " | " .. s.selectedName .. " (NPC " .. s.selectedNpcID .. ")",
+    local m = G.Calculator.Metrics(s, G.Session:PrimaryNPC(s), G.Storage.settings.method, self.revalued)
+    return F.Plain(table.concat({"GrindMeter " .. G.version .. " | " .. self:SessionName(s) .. (G.Session:IsContinuous(s) and " | " .. G.L("liveScope") or " (NPC " .. s.selectedNpcID .. ")"),
         F.Date(s.startedAt) .. " | " .. (s.zoneName or "") .. " | Lv " .. s.levelStart .. " | " .. s.groupInfo,
         G.L("measured") .. ": " .. F.Time(s.measuredSeconds) .. " | " .. G.L("pausedTime") .. ": " .. F.Time(s.pausedSeconds),
         m.kills .. " kills | " .. F.Number(m.killsHour) .. " kills/h | " .. F.Number(m.xpHour) .. " XP/h | " .. F.Gold(m.valuation.rate) .. " G/h",

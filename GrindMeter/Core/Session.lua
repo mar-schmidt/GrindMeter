@@ -1,5 +1,11 @@
 local _, G = ...
 local S = {}; G.Session = S
+function S:IsContinuous(session)
+    return session and session.mode == "continuous" or false
+end
+function S:PrimaryNPC(session)
+    if not self:IsContinuous(session) then return session.selectedNpcID end
+end
 function S:Counter(npcID, name)
     local s = self.s
     local counter = s.countersByNpcID[npcID]
@@ -9,27 +15,40 @@ function S:Counter(npcID, name)
     elseif name then counter.name = name end
     return counter
 end
-function S:Start(selection, context, now, epoch)
+function S:Start(selection, context, now, epoch, mode)
     if self.s then return false, "alreadyRunning" end
-    if not selection or not selection.npcID then return false, "noTarget" end
+    local continuous = mode == "continuous"
+    if not continuous and (not selection or not selection.npcID) then return false, "noTarget" end
+    if continuous then
+        -- Zero identifies an all-mob session, never an actual NPC or a source counter.
+        selection = {npcID = 0, name = G.L("allMobs"), zoneName = GetZoneText(),
+            mapID = C_Map and C_Map.GetBestMapForUnit("player")}
+    end
     local settings = G.Storage.settings
     local session = G.Copy(context)
-    session.id = tostring(epoch) .. "-" .. tostring(math.floor(now * 1000))
+    local sequence = G.Storage.character.sessionSequence
+    if type(sequence) ~= "number" or sequence ~= sequence or sequence < 0 or sequence >= 9007199254740991 then sequence = 0 end
+    G.Storage.character.sessionSequence = math.floor(sequence) + 1
+    session.id = tostring(epoch) .. "-" .. tostring(math.floor(now * 1000)) .. "-" .. G.Storage.character.sessionSequence
     session.schemaVersion = G.schema; session.addonVersion = G.version
+    session.mode = continuous and "continuous" or "mob"
     session.selectedNpcID = selection.npcID; session.selectedName = selection.name
     session.mapID = selection.mapID; session.zoneName = selection.zoneName
     session.startedAt = epoch; session.measuredSeconds = 0; session.pausedSeconds = 0
-    session.duration = settings.duration; session.state = "running"; session.fee = settings.fee
+    session.duration = continuous and 0 or settings.duration; session.state = "running"; session.fee = settings.fee
     session.countersByNpcID = {}; session.killRecords = {}; session.killOrder = {}
     session.lootReceipts = {}; session.coinsByNpcID = {}; session.priceSnapshot = {}
     session.unattributedXP = 0; session.unattributedLoot = 0; session.unattributedMoney = 0
     session.allXPDelta = 0; session.diagnosticsSummary = {}; session.bodyObservations = {}
     session.catalogVersion = G.Catalog.version; session.collectionEpoch = 1
     self.s = session; self.anchor = now; self.pauseAnchor = nil; self.last = nil
-    self:Counter(selection.npcID, selection.name)
+    if not continuous then self:Counter(selection.npcID, selection.name) end
     G.Storage.character.active = session
     if G.Trackers then G.Trackers:Reset() end
     return true
+end
+function S:StartContinuous(context, now, epoch)
+    return self:Start(nil, context, now, epoch, "continuous")
 end
 function S:Tick(now)
     local session = self.s

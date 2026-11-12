@@ -1,10 +1,10 @@
-# Testresultat — GrindMeter 0.1.3
+# Testresultat — GrindMeter 0.2.0
 
 Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, inte spelklient.
 
 ## Genomfört
 
-**64 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
+**74 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
 
 | Område | Automatiskt verifierat |
 |---|---|
@@ -25,9 +25,18 @@ Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, int
 | Språk | Klientens engelska format och positionsnumrerad tyska; inga hårdkodade engelska “You”-antaganden i parsern |
 | Restriktioner | Begränsad combatkälla ger okänt, inte fabricerade kills; saknad lootkälla ger ofullständigt värde; extern combatlog och RestedXP ändras inte |
 | UI | Ladda addon, välj target, starta, stäng utan stopp, pausa/fortsätt via HUD, avsluta, historik, språkväljare, minimappväxling och kopierbar rapport |
+| Löpande | Targetfri start, duration 0 utan att ändra fokuserad mättid, alla mobbar med samma tidsnämnare, korrekt sjunkande snitt vid inaktivitet, quest/okänd loot exkluderas |
+| Löpande panel | Tick med stängt huvudfönster, dölj/visa utan stopp, paus exkluderar tid/rewards, nollställ sparar och bevarar pausläge, rätt svenska/engelska etiketter |
+| Långa pass | 8 193 återkommande mottagningar summeras utan stopp, osäker källa hålls separat, gruppering fungerar efter paus, gamla kroppar lärs exakt en gång vid cachegränsen |
 | Prisimportverktyg | Scope, framtidsdatum, stack-/styckpris, Lua-escaping, icke-finita tal och exkludering av extra fält/hemligheter |
 
 De 32 acceptans-ID:na har syntetiska testfall, med AT-21/22 i ett gemensamt fall och kompletterande gränsfall. Detta innebär inte att alla klientberoende delar av acceptanskraven är godkända i spelet.
+
+## Löpande läge i 0.2.0
+
+Tio nya regressionstester täcker start utan target, två mobtypers G/XP per timme, inaktivitet, paus, saknade källor, HUD med stängt huvudfönster, nollställning, historik, reload utan offline-tid, upprepade kommandon och ömsesidigt skydd mot överskrivning. Tidigare historik utan mode accepteras fortfarande. Rapporter och historik använder all-mob-totalen utan att visa intern NPC-markör 0.
+
+Den simulerade sekvensen med två mobs ger 3 000 XP/h och 4 800 koppar/h efter 600 sekunder. Efter ytterligare 600 sekunder utan rewards blir motsvarande värden 1 500 XP/h och 2 400 koppar/h. Detta verifierar snitt sedan start, inte ett rullande tidsfönster. 8 193 upprepade lootreceipts och 4 097 killcredit-events provar minnesgränsernas beteende separat från verklig klientprestanda.
 
 ## Uppstartsregression i 0.1.1
 
@@ -56,7 +65,7 @@ Sorteringens fyra lägen, inställningarnas på/av-markeringar och stängknappar
 
 ## Visuell granskning
 
-Den faktiska UI-kodens frame-träd exporterades genom testharnessen och renderades lokalt för kontroll av startvy, resultatsida och kompakt panel. Renderingen använder systemfont och emulerar inte Blizzard-texturer/native tooltips. Den är en layoutkontroll med syntetiska siffror, inte en skärmbild från WoW.
+Den faktiska UI-kodens frame-träd exporterades genom testharnessen för åtta vyer. Löpande startvy och resultat samt den nya kompakta panelen på svenska/engelska har renderats och granskats. Renderingen använder systemfont och emulerar inte Blizzard-texturer/native tooltips. Den är en layoutkontroll med syntetiska siffror, inte en skärmbild från WoW.
 
 ## Återstår
 

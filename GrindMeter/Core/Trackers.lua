@@ -5,6 +5,7 @@ function T:ResetTransient()
     self.pendingXP = {}; self.recentKills = {}; self.windows = {}; self.window = nil; self.gatherUntil = nil
     self.seenLines = {}; self.lineOrder = {}; self.receiptSequence = 0
     self.xpCheck = nil
+    self.receiptGroups = nil
 end
 function T:Reset()
     self:ResetTransient(); self.observedBodies = {}; self.roster = {}
@@ -48,7 +49,19 @@ function T:Credit(guid, name, sourceGUID, now, evidence)
     local record = {creatureGUID = guid, npcID = npcID, name = name, eventTime = now,
         creditEvidence = evidence, confidence = "confirmed", epoch = s.collectionEpoch}
     s.killRecords[guid] = record; s.killOrder[#s.killOrder + 1] = guid
-    if #s.killOrder > MAX_KILLS then s.killRecords[table.remove(s.killOrder, 1)] = nil end
+    if #s.killOrder > MAX_KILLS then
+        local expired = table.remove(s.killOrder, 1)
+        if G.Session:IsContinuous(s) then
+            local old = s.killRecords[expired]
+            local observations = s.bodyObservations[old.npcID]
+            if observations and observations[expired] then
+                G.Catalog:Learn({bodyObservations = {[old.npcID] = {[expired] = observations[expired]}}, endedAt = time()})
+                observations[expired] = nil
+            end
+            self.observedBodies[expired] = nil
+        end
+        s.killRecords[expired] = nil
+    end
     self.recentKills[#self.recentKills + 1] = record
     if #self.recentKills > 100 then table.remove(self.recentKills, 1) end
     G.Session:Counter(npcID, name).kills = G.Session:Counter(npcID, name).kills + 1
@@ -160,7 +173,6 @@ function T:Receipt(link, quantity, lineID, now)
     if not G.Session:Collecting(now) or not self:Unique("loot", lineID) then return end
     local s = G.Session.s; local key, itemID = G.ItemKey(link), G.ItemID(link)
     if not key or not itemID or type(quantity) ~= "number" or quantity <= 0 then return end
-    if #s.lootReceipts >= MAX_RECEIPTS then self:Diagnostic("receiptLimit"); G.Session:Stop(now, time(), "receiptLimit"); return end
     local slot, window = self:FindSlot(key, quantity, now)
     local npcID, guids
     if slot then
@@ -172,7 +184,26 @@ function T:Receipt(link, quantity, lineID, now)
         eventTime = now, itemID = itemID, itemLink = link, variantKey = key, quantity = quantity,
         sourceGUIDs = guids or {}, sourceNpcID = npcID, category = npcID and "normal" or "unclassified",
         attributionStatus = npcID and "confirmed" or "unknown"}
-    s.lootReceipts[#s.lootReceipts + 1] = receipt
+    local groupKey, previous
+    if G.Session:IsContinuous(s) then
+        if not self.receiptGroups then
+            self.receiptGroups = {}
+            for _, row in ipairs(s.lootReceipts) do
+                self.receiptGroups[row.variantKey .. ":" .. (row.sourceNpcID or "unknown") .. ":" .. row.category] = row
+            end
+        end
+        groupKey = key .. ":" .. (npcID or "unknown") .. ":" .. receipt.category
+        previous = self.receiptGroups[groupKey]
+        receipt.sourceGUIDs = {}; receipt.aggregated = true; receipt.receiptCount = 1
+    end
+    if previous then
+        previous.quantity = previous.quantity + quantity
+        previous.receiptCount = (previous.receiptCount or 1) + 1; previous.lastEventTime = now
+    else
+        if #s.lootReceipts >= MAX_RECEIPTS then self:Diagnostic("receiptLimit"); G.Session:Stop(now, time(), "receiptLimit"); return end
+        s.lootReceipts[#s.lootReceipts + 1] = receipt
+        if groupKey then self.receiptGroups[groupKey] = receipt end
+    end
     if not npcID then s.unattributedLoot = s.unattributedLoot + quantity end
     if not s.priceSnapshot[key] then s.priceSnapshot[key] = G.Prices:Resolve(link, s, time()) end
     if npcID and #guids == 1 then

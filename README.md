@@ -2,11 +2,11 @@
 
 Ett fristående addon för **WoW Forever** som mäter kills/h, faktiskt erhållen mob-XP/h och värdet av loot du plockar upp. Svenska är förvalt språk; engelska väljs under Inställningar.
 
-**0.1.3 ersätter symboler som kunde visas som fyrkanter i UI:t.** Sorteringen visar nu **Kvalitet** eller **Quality** i stället för en stjärna. Inställningar, knappar och statusrader använder vanliga texttecken; svenska å, ä och ö behålls. Pris- och uppstartskorrigeringarna från tidigare versioner ingår. Automatiska tester är genomförda; visningen behöver fortfarande bekräftas inne i WoW. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
+**0.2.0 lägger till Löpande:** G/h och mob-XP/h för alla mobbar i en liten flyttbar panel, utan targetval eller förvald stopptid. Starta från fliken **Löpande** eller med `/gm live`. Tidigare pris-, uppstarts- och textkorrigeringar ingår. Automatiska tester och simulerad layoutkontroll är genomförda; verifiering inne i WoW återstår. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
 
 ## Installera
 
-1. Ladda ned **GrindMeter-0.1.3.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
+1. Ladda ned **GrindMeter-0.2.0.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
 2. Packa upp. Flytta hela mappen **GrindMeter** till spelets `Interface/AddOns`.
 3. Starta om WoW om mappen är ny. Kontrollera att GrindMeter är aktiverat i addonlistan. Efter uppdatering av ett redan upptäckt addon räcker normalt `/reload`.
 
@@ -24,7 +24,21 @@ C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\GrindMeter\G
 
 Vid uppdatering: ersätt den gamla addonmappen, behåll spelets SavedVariables och kör `/reload`. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
 
-TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.3`-mapp gör att spelet inte hittar addonet.
+TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.2.0`-mapp gör att spelet inte hittar addonet.
+
+## Löpande G/h och XP/h
+
+Öppna GrindMeter med minimappikonen, välj **Löpande** och klicka **Starta löpande**. Snabbkommandot `/gm live` startar samma läge direkt. Inget target behövs. Huvudfönstret stängs och en flyttbar panel på 308 × 216 UI-pixlar visar två stora siffror: **G/h** och **Mob-XP/h**.
+
+- Alla säkert registrerade mobtyper ingår. Värdena är **snitt sedan start**, inte ett rullande 60-minutersfönster. De uppdateras fyra gånger per sekund och sjunker under vila om du inte pausar.
+- **Pausa / Fortsätt** stoppar och återupptar både tid och insamling. Resor och väntan ingår annars.
+- **Nollställ** sparar den gamla perioden i historiken och börjar från noll. Var passet pausat förblir den nya perioden pausad.
+- **Stoppa** sparar och avslutar. Att stänga panelen med **x** döljer den; mätningen fortsätter. Högerklick på minimappikonen eller `/gm hud` visar den igen.
+- Klicka på **Värde: Vendor** i panelen för att växla till **Bästa kända försäljning** med AH-priser. G/h är mynt plus beräknat lootvärde, inte förändringen av kontantsaldot.
+
+XP avser erhållen mob-XP; quest-XP ingår inte. Loot utan säker mobkälla och professionsloot tillskrivs inte mobbar. Saknad data visas som delvärde med detaljer i huvudfönstret. Löpande och en specifik mobmätning använder ett pass åt gången; ett nytt läge skriver aldrig över ett pågående pass.
+
+Vid `/reload` eller ny inloggning återställs ett aktivt pass **pausat** så att offline-tid inte räknas. Starta samma löpande pass igen med **Fortsätt**. `/gm live` visar ett redan pågående löpande pass utan att nollställa det.
 
 ## Din första mätning
 
@@ -36,7 +50,7 @@ TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.3`-map
 
 Mobtypen låses när passet börjar. En annan target ändrar inte huvudmobben. Springande, vila, väntan på respawn, looting och död ingår i mättiden. **Pausa** stoppar både tiden och insamlingen; **Fortsätt** återupptar dem tillsammans.
 
-Den lilla flyttbara panelen visar tid, kills/h, XP/h och lootvärde/h. Stäng panelen eller stora fönstret utan att avsluta passet. **Avsluta och spara** avslutar mätningen. Vid timeout sparas resultatet med en diskret chattrad; inget stort fönster öppnas över strid.
+Den lilla flyttbara panelen visar tid, mob-XP/h och lootvärde/h. Kills/h finns i huvudfönstret. Stäng panelen eller stora fönstret utan att avsluta passet. **Avsluta och spara** avslutar mätningen. Vid timeout sparas resultatet med en diskret chattrad; inget stort fönster öppnas över strid.
 
 ### Minimap och kommandon
 
@@ -47,6 +61,7 @@ Den lilla flyttbara panelen visar tid, kills/h, XP/h och lootvärde/h. Stäng pa
 | Dra ikonen | Flytta den runt minimappen |
 | Dra fönstrets/panelens rubrik | Flytta gränssnittet |
 | `/gm` | Öppna/stäng huvudfönstret |
+| `/gm live` | Starta löpande utan target, eller visa befintligt löpande pass |
 | `/gm hud` | Visa/dölj den lilla panelen |
 | `/gm reset` | Återställ positioner och visa minimappikonen |
 | `/gm diagnostics` | Kopierbar klient- och eventdiagnostik |
@@ -54,7 +69,7 @@ Den lilla flyttbara panelen visar tid, kills/h, XP/h och lootvärde/h. Stäng pa
 
 ## Förstå resultatet
 
-De tre stora rutorna gäller **vald mob**. **Hela passet** har en egen rad och kan dessutom omfatta andra säkert krediterade mobbar. Alla timvärden använder samma mättid. Mindre än fem minuter eller färre än tio kills märks som preliminärt.
+Under **Mätning** gäller de tre stora rutorna **vald mob**. **Hela passet** har en egen rad och kan dessutom omfatta andra säkert krediterade mobbar. Under **Löpande** summerar rutorna alla mobbar. Alla timvärden använder samma mättid. Mindre än fem minuter eller färre än tio kills märks som preliminärt.
 
 | Siffra | Innebörd |
 |---|---|
