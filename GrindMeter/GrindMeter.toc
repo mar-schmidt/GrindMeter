@@ -1,0 +1,26 @@
+## Interface: 16001
+## Title: GrindMeter
+## Notes: Measure your grind. Understand your kills, XP and loot value.
+## Author: Marcus Schmidt
+## Version: 0.1.0
+## SavedVariables: GrindMeterDB
+## OptionalDeps: Auctionator
+## IconTexture: Interface\Icons\INV_Misc_PocketWatch_01
+
+Core/Namespace.lua
+Core/Locale.lua
+Core/Format.lua
+Core/Calculator.lua
+Data/Catalog.lua
+Data/CommunityCatalog.lua
+Data/ImportedPrices.lua
+Data/Prices.lua
+Core/Storage.lua
+Core/Session.lua
+Core/Parser.lua
+Core/Trackers.lua
+Core/Client.lua
+UI/Widgets.lua
+UI/Window.lua
+UI/Minimap.lua
+Core/Bootstrap.lua

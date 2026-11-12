@@ -1,0 +1,3 @@
+-- Optional local price snapshot. No market prices ship with GrindMeter.
+-- scripts/import_prices.py generates this file from a scoped JSON export.
+-- /reload is required after replacing it. Never place credentials here.

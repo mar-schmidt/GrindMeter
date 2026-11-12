@@ -1,0 +1,68 @@
+name: Validate and release addon
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grindmeter-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: sudo apt-get update -qq && sudo apt-get install -y lua5.1
+      - name: Check Lua syntax
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess
+          for path in pathlib.Path("GrindMeter").rglob("*.lua"):
+              subprocess.run(["luac5.1", "-p", str(path)], check=True)
+          PY
+      - name: Run synthetic acceptance sequences and UI smoke test
+        run: lua5.1 tests/run.lua
+      - name: Verify price import tools
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Rebuild checked-in catalog and verify reproducibility
+        run: |
+          python3 scripts/build_catalog.py
+          git diff --exit-code -- GrindMeter/Data/CommunityCatalog.lua
+      - name: Build and verify installation ZIP
+        run: python3 scripts/build_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrindMeter-release
+          path: dist/*
+          if-no-files-found: error
+  release:
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: GrindMeter-release
+          path: dist
+      - name: Publish a version once, with the installable ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^## Version: //p' GrindMeter/GrindMeter.toc)
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Version already published. Bump the addon version for a new release."
+            exit 0
+          fi
+          gh release create "$tag" "dist/GrindMeter-${version}.zip" dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "GrindMeter ${version} — test release" \
+            --prerelease --notes-file docs/RELEASE_NOTES.md
