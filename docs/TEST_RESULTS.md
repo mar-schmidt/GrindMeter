@@ -1,10 +1,10 @@
-# Testresultat — GrindMeter 0.2.0
+# Testresultat — GrindMeter 0.2.1
 
 Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, inte spelklient.
 
 ## Genomfört
 
-**74 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
+**79 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
 
 | Område | Automatiskt verifierat |
 |---|---|
@@ -31,6 +31,14 @@ Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, int
 | Prisimportverktyg | Scope, framtidsdatum, stack-/styckpris, Lua-escaping, icke-finita tal och exkludering av extra fält/hemligheter |
 
 De 32 acceptans-ID:na har syntetiska testfall, med AT-21/22 i ett gemensamt fall och kompletterande gränsfall. Detta innebär inte att alla klientberoende delar av acceptanskraven är godkända i spelet.
+
+## Hover- och itemdataregression i 0.2.1
+
+Rapporterad hängning vid itemhover undersöktes genom källgranskning och syntetiska itemladdningar. I den gamla versionen gav 100 behandlade lyckade laddningssignaler med fortsatt saknad metadata 101 explicita laddningar och en ny väntande signal: återkopplingen tog inte slut. Det är ett reproducerat kodfel, inte en verifierad reproduktion av användarens faktiska hängning inne i WoW.
+
+Fem nya regressionstester verifierar att ofärdig metadata inte skapar en eventloop, orelaterade väsktooltips inte omvärderar loot, laddningsfel har backoff och dubbla signaler samlas, statisk metadata inte blandas med färska/historiska AH-priser och hover bara använder en privat cachebaserad värderingstooltip. Reentrant hover, upprepade listuppdateringar, native klick och chatlänkar provas. Det befintliga testet för sen metadata går nu genom Bootstrap-ticken med stängt huvudfönster.
+
+Global tooltip, item- och pris-API:er ersätts med avsiktligt felande testdubblar under hover. Värderingsrutan fungerar ändå, och synliga rader behöver inte döljas/visas om. Ingen testad kod skickar spelinput eller kör i målklienten.
 
 ## Löpande läge i 0.2.0
 

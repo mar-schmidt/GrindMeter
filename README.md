@@ -2,11 +2,11 @@
 
 Ett fristående addon för **WoW Forever** som mäter kills/h, faktiskt erhållen mob-XP/h och värdet av loot du plockar upp. Svenska är förvalt språk; engelska väljs under Inställningar.
 
-**0.2.0 lägger till Löpande:** G/h och mob-XP/h för alla mobbar i en liten flyttbar panel, utan targetval eller förvald stopptid. Starta från fliken **Löpande** eller med `/gm live`. Tidigare pris-, uppstarts- och textkorrigeringar ingår. Automatiska tester och simulerad layoutkontroll är genomförda; verifiering inne i WoW återstår. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
+**0.2.1 rättar en itemdataloop som kan låsa UI:t vid hover.** Laddningssignaler behandlas samlat, bara för GrindMeters egna väntande items. Hovring visar en separat värderingsruta med redan hämtade uppgifter; klick öppnar spelets fullständiga itemdetaljer. Löpande G/h och mob-XP/h finns kvar under **Löpande** eller `/gm live`. Automatiska tester passerar; verifiering inne i WoW återstår. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
 
 ## Installera
 
-1. Ladda ned **GrindMeter-0.2.0.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
+1. Ladda ned **GrindMeter-0.2.1.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
 2. Packa upp. Flytta hela mappen **GrindMeter** till spelets `Interface/AddOns`.
 3. Starta om WoW om mappen är ny. Kontrollera att GrindMeter är aktiverat i addonlistan. Efter uppdatering av ett redan upptäckt addon räcker normalt `/reload`.
 
@@ -24,7 +24,7 @@ C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\GrindMeter\G
 
 Vid uppdatering: ersätt den gamla addonmappen, behåll spelets SavedVariables och kör `/reload`. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
 
-TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.2.0`-mapp gör att spelet inte hittar addonet.
+TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.2.1`-mapp gör att spelet inte hittar addonet.
 
 ## Löpande G/h och XP/h
 
@@ -82,7 +82,7 @@ Under **Mätning** gäller de tre stora rutorna **vald mob**. **Hela passet** ha
 
 Klicka på **G/h-rutan** eller byt under Inställningar för att växla värdering. Vendor- och AH-värden är alternativa modeller. AH-värde betyder inte att guldet redan har tjänats in. Värderingen är före förbrukning och reparation och antar lyckad försäljning utan förlorad deposition. Förvald AH-avgift **5 % är ett konfigurerbart modellantagande**, ännu inte validerat i denna klient.
 
-**Din loot** visar faktiskt mottagna items och deras källor. Hovra för spelets itemtooltip. Klicka för itemdetaljer. Använd spelets konfigurerade modifierade itemklick eller knappen **Länka** för att lägga en länk i chattrutan. Addonet skickar inga chattmeddelanden åt dig och kräver ingen särskild Windows-tangent.
+**Din loot** visar faktiskt mottagna items och deras källor. Hovra för en separat värderingsruta med cachelagrade uppgifter, utan nya item- eller AH-anrop. Klicka för spelets fullständiga itemdetaljer. Använd spelets konfigurerade modifierade itemklick eller knappen **Länka** för att lägga en länk i chattrutan. Addonet skickar inga chattmeddelanden åt dig och kräver ingen särskild Windows-tangent.
 
 **Möjlig loot** visar en separat katalog. Den medföljande communitykatalogen täcker **165 NPC-ID:n och 1 264 item/NPC-poster**, daterad **2026-11-12**. Den är ofullständig. Dess procentsiffror gäller observerade lootfönster, inte alla dödade mobbar; mängder och villkor saknas och äldre oklassade observationer kan ingå. Dessa uppgifter används därför inte som killbaserad guldprognos. Egna säkert mottagna fynd från fullt observerade solokroppar byggs också upp separat. Inga hypotetiska katalogdrops ökar uppmätt lootvärde.
 

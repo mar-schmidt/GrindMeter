@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-11-12
+
+- Bryter en återkopplingsloop där en lyckad laddningssignal före fullständig itemdata kunde utlösa ännu en laddning. Bara egna utestående förfrågningar hanteras, dubbla signaler slås ihop och data behandlas på nästa UI-tick.
+- Cachelagrar statisk itemmetadata separat från AH-prisbilden. Saknade eller misslyckade items har fem sekunders väntetid mellan laddningsförsök; en passiv kontroll efter laddningssignalen startar ingen ny explicit laddning.
+- Hover använder en separat värderingstooltip med redan hämtade uppgifter. Ingen `SetHyperlink`, itemdata- eller AH-fråga görs vid hover; native itemdetaljer finns kvar via klick och riktiga itemlänkar.
+- Synliga lootrader döljs/visas inte om vid varje listuppdatering. Tooltipen har skydd mot återinträde och stängs tillsammans med sin rad eller huvudfönstret.
+- Fem nya regressionstester; totalt 79 Lua-tester och 3 Python-tester. Den syntetiskt reproducerade eventloopen avslutas, även om itemdata fortfarande saknas. Bekräftelse av rapporterad hängning i målklienten återstår.
+
 ## 0.2.0 — 2026-11-12
 
 - Ny flik Löpande och `/gm live`: start utan vald mob eller förvald stopptid, med gemensamt snitt för alla säkert registrerade mobbar sedan start.

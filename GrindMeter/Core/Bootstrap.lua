@@ -63,6 +63,7 @@ frame:SetScript("OnUpdate", function(_, elapsed)
     if not initialized or accumulated < .25 then return end
     accumulated = 0
     local now = GetTime()
+    G.Prices:ProcessPendingItems()
     G.Session:Tick(now); G.Trackers:FlushXP(now)
     if G.UI.hud:IsShown() then G.UI:UpdateHUD() end
     if G.UI.main:IsShown() and (G.UI.dirty or G.Session.s) then

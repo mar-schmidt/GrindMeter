@@ -107,7 +107,7 @@ local strings = {
     localBias = {"Egen observation - urvalet kan påverkas av lootval och gruppfördelning.", "Own observation - loot choices and group distribution can bias the sample."},
     baseVariant = {"Katalogpost för grunditem. Suffixvarianter kan ha andra priser.", "Base-item catalog entry. Suffix variants may have different prices."},
     rewardMissing = {"XP eller loot kan sakna säker koppling. Berörda nyckeltal visas som delvärden.", "Some XP or loot lacks confirmed attribution. Affected metrics are shown as subtotals."},
-    diagnosticsWarning = {"Klienttest återstår - 0.2.0", "In-game validation pending - 0.2.0"},
+    diagnosticsWarning = {"Klienttest återstår - 0.2.1", "In-game validation pending - 0.2.1"},
 }
 G.Strings = strings
 function G.L(key, ...)

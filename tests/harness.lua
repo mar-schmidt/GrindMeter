@@ -24,7 +24,15 @@ function Frame:ClearAllPoints() self.anchor = nil end
 function Frame:SetAllPoints(relative) self.fillParent = relative or self.parent end
 function Frame:CreateTexture(name) return new("Texture", name, self) end
 function Frame:CreateFontString(name) return new("FontString", name, self) end
-function Frame:SetText(text) self.text = tostring(text or ""); if self.fontString then self.fontString:SetText(text) end end
+function Frame:SetText(text)
+    self.text = tostring(text or ""); if self.fontString then self.fontString:SetText(text) end
+    if self.kind == "GameTooltip" then self.lines = {self.text} end
+end
+function Frame:ClearLines() self.lines = {} end
+function Frame:AddLine(text) self.lines[#self.lines + 1] = text end
+function Frame:AddDoubleLine(left, right) self.lines[#self.lines + 1] = left .. ": " .. right end
+function Frame:SetOwner(owner) self.owner = owner end
+function Frame:IsOwned(owner) return self.owner == owner end
 function Frame:GetText() return self.text or "" end
 function Frame:SetFontString(font) self.fontString = font end
 function Frame:SetFont(path, size) self.fontSize = size end
@@ -71,9 +79,15 @@ function Frame:RegisterEvent(event)
 end
 function Frame:StartMoving() end
 function Frame:StopMovingOrSizing() end
-function Frame:Show() self.shown = true end
-function Frame:Hide() self.shown = false end
-function Frame:SetShown(value) self.shown = value and true or false end
+function Frame:Show()
+    local changed = not self.shown; self.shown = true
+    if changed and self.scripts.OnShow then self.scripts.OnShow(self) end
+end
+function Frame:Hide()
+    local changed = self.shown; self.shown = false
+    if changed and self.scripts.OnHide then self.scripts.OnHide(self) end
+end
+function Frame:SetShown(value) if value then self:Show() else self:Hide() end end
 function Frame:IsShown() return self.shown and (not self.parent or self.parent:IsShown()) end
 function Frame:GetCenter() return 1000, 100 end
 function Frame:Click(button) if self.enabled and self.scripts.OnClick then self.scripts.OnClick(self, button or "LeftButton") end end

@@ -148,7 +148,7 @@ test("AT-25 late item metadata doesn't create receipts or new AH quotes", functi
     local G = H.setup(); local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
     G.Trackers:OpenLoot(H.slot(G, guid, link, 1), 0); G.Trackers:Receipt(link, 1, 1, 0)
     equal(s.priceSnapshot[G.ItemKey(link)].vendor, nil)
-    H.items[1] = {vendor = 25}; G.Prices:FillItemData(s)
+    H.items[1] = {vendor = 25}; H.at(5); G.Prices:FillItemData(s)
     equal(s.priceSnapshot[G.ItemKey(link)].vendor, 25); equal(#s.lootReceipts, 1)
 end)
 test("AT-26 full suffix is preserved; bound loot rejects AH", function()
@@ -378,12 +378,14 @@ test("Auctionator database updates recover an initially missing quote with the m
     G.Prices:Initialize(); equal(subscriptions, 1)
 end)
 test("late item metadata refreshes both AH and eligibility for an active session", function()
-    local G = H.setup(); local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    local G = H.setup(true); G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
+    local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
     Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return H.items[1] and 1000 or nil end,
         GetAuctionAgeByItemLink = function() return 0 end}}}
     G.Trackers:OpenLoot(H.slot(G, guid, link, 2), 0); G.Trackers:Receipt(link, 2, 1, 0)
     equal(G.Calculator.Value(s, 259055, "best").unknown, 2)
     H.items[1] = {vendor = 100}; G.Client:Dispatch("ITEM_DATA_LOAD_RESULT", 1, true)
+    G.eventFrame.scripts.OnUpdate(G.eventFrame, .25)
     near(G.Calculator.Value(s, 259055, "best").value, 1900); equal(#s.lootReceipts, 1)
     equal(s.priceSnapshot[G.ItemKey(link)].tradeEligible, true)
 end)
@@ -432,7 +434,8 @@ test("new bind-on-use loot is eligible; account-bound-until-equipped loot is not
     local G = H.setup(); H.items[1] = {vendor = 100, bind = 3}
     equal(G.Prices:ItemInfo(H.link(1)).tradeEligible, true)
     C_Item.IsItemBindToAccountUntilEquip = function() return true end
-    equal(G.Prices:ItemInfo(H.link(1)).tradeEligible, false)
+    H.items[2] = {vendor = 100, bind = 3}
+    equal(G.Prices:ItemInfo(H.link(2)).tradeEligible, false)
 end)
 test("scan-day precision distinguishes fresh, uncertain and definitely stale prices", function()
     local G = H.setup(); local ageDays = 0
@@ -462,7 +465,7 @@ test("loot tooltip explains the exact row total and exclusion of unsourced loot"
     Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return 870 end, GetAuctionAgeByItemLink = function() return 0 end}}}
     G.Trackers:Receipt(H.link(1), 4, 1, 0); G.UI:Refresh()
     local lines = {}
-    GameTooltip = setmetatable({AddLine = function(_, t) lines[#lines + 1] = t end,
+    G.UI.itemTooltip = setmetatable({AddLine = function(_, t) lines[#lines + 1] = t end,
         AddDoubleLine = function(_, a, b) lines[#lines + 1] = a .. ": " .. b end}, {__index = function() return function() end end})
     G.UI.lootRows[1].scripts.OnEnter()
     local combined = G.F.Plain(table.concat(lines, "\n"))
@@ -611,6 +614,93 @@ test("continuous old body observations are learned once and retired with the bou
     G.Session:Stop(H.at(60), time(), "manual")
     equal(G.Storage.character.catalog[1].bodies, 1)
     equal(G.Storage.character.catalog[1].items[G.ItemKey(link)].units, 2)
+end)
+test("partial successful item loads settle without a self-sustaining request/event loop", function()
+    local G = H.setup(); G.Session:StartContinuous(G.Client:Context(), 0, time())
+    local queue, reads, loads = {}, 0, 0
+    C_Item.GetItemInfo = function()
+        reads = reads + 1; queue[#queue + 1] = {"GET_ITEM_INFO_RECEIVED", 1, true}
+    end
+    C_Item.RequestLoadItemDataByID = function()
+        loads = loads + 1; queue[#queue + 1] = {"ITEM_DATA_LOAD_RESULT", 1, true}
+    end
+    G.Trackers:Receipt(H.link(1), 1, 1, 0)
+    for frame = 1, 10 do
+        local events = queue; queue = {}
+        assert(#events < 10, "item-data events are multiplying")
+        for _, event in ipairs(events) do G.Client:Dispatch(unpack(event)) end
+        G.Prices:ProcessPendingItems()
+    end
+    equal(loads, 1); equal(reads, 2); equal(#queue, 0)
+    equal(G.Session.s.lootReceipts[1].quantity, 1)
+end)
+test("ordinary bag tooltip item events never reprice cached loot or dirty GrindMeter", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local s = H.start(G)
+    G.Trackers:Receipt(H.link(1), 2, 1, 0); G.UI = {dirty = false}
+    local snapshot = s.priceSnapshot[G.ItemKey(H.link(1))]
+    C_Item.GetItemInfo = function() error("unrelated tooltip must not cause an item query") end
+    G.Prices.Resolve = function() error("unrelated tooltip must not cause repricing") end
+    for i = 1, 100 do
+        G.Client:Dispatch("GET_ITEM_INFO_RECEIVED", 1, true)
+        G.Client:Dispatch("ITEM_DATA_LOAD_RESULT", 999, true)
+    end
+    equal(G.Prices:ProcessPendingItems(), false); equal(G.UI.dirty, false)
+    equal(s.priceSnapshot[G.ItemKey(H.link(1))], snapshot)
+end)
+test("failed item loads back off and duplicate completion signals recover metadata exactly once", function()
+    local G = H.setup(); local s = H.start(G); local link = H.link(1)
+    G.Trackers:Receipt(link, 2, 1, 0); equal(H.requests, 1)
+    G.Client:Dispatch("ITEM_DATA_LOAD_RESULT", 1, false)
+    equal(G.Prices:ProcessPendingItems(), false)
+    H.at(4.99); G.Prices:ItemInfo(link); equal(H.requests, 1)
+    H.at(5); G.Prices:ItemInfo(link); equal(H.requests, 2)
+    H.items[1] = {vendor = 123}
+    G.Client:Dispatch("ITEM_DATA_LOAD_RESULT", 1, true)
+    G.Client:Dispatch("GET_ITEM_INFO_RECEIVED", 1, true)
+    equal(s.priceSnapshot[G.ItemKey(link)].vendor, nil)
+    equal(G.Prices:ProcessPendingItems(), true); equal(G.Prices:ProcessPendingItems(), false)
+    equal(s.priceSnapshot[G.ItemKey(link)].vendor, 123); equal(H.requests, 2)
+    equal(s.lootReceipts[1].quantity, 2)
+end)
+test("static item metadata is cached separately from fresh and historical AH quotes", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local link = H.link(1); local price = 500
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return price end, GetAuctionAgeByItemLink = function() return 0 end}}}
+    local first = G.Prices:Resolve(link, G.Client:Context(), time()); first.vendor = 999
+    C_Item.GetItemInfo = function() error("cached metadata must not be queried again") end
+    price = 1000; local second = G.Prices:Resolve(link, G.Client:Context(), time())
+    equal(second.vendor, 100); equal(second.ah.unitPriceCopper, 1000)
+    equal(first.ah.unitPriceCopper, 500); equal(G.Prices:ItemInfo(link).ah, nil)
+end)
+test("hover uses an isolated cached tooltip, survives reentry and keeps rows stable on refresh", function()
+    local G = H.setup(true); G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
+    H.items[1] = {vendor = 100}; H.start(G)
+    local link = H.link(1); G.Trackers:Receipt(link, 2, 1, 0)
+    G.UI:Refresh(); G.UI.main:Show()
+    local row, globalCalls = G.UI.lootRows[1], 0
+    GameTooltip = setmetatable({}, {__index = function() return function()
+        globalCalls = globalCalls + 1; error("hover must not touch the shared item tooltip")
+    end end})
+    C_Item.GetItemInfo = function() error("hover must not query item metadata") end
+    C_Item.RequestLoadItemDataByID = function() error("hover must not request items") end
+    G.Prices.Resolve = function() error("hover must not query AH prices") end
+    local tip, entries = G.UI.itemTooltip, 0
+    local setText = tip.SetText
+    tip.SetText = function(self, ...)
+        entries = entries + 1; assert(entries < 100)
+        row:GetScript("OnEnter")(); return setText(self, ...)
+    end
+    row:GetScript("OnEnter")(); equal(entries, 1); assert(tip:IsShown())
+    local combined = G.F.Plain(table.concat(tip.lines, "\n"))
+    assert(combined:find("0g 2s 0c", 1, true)); equal(globalCalls, 0)
+    local hidden, shown = 0, 0
+    local hide, show = row.Hide, row.Show
+    row.Hide = function(self) hidden = hidden + 1; return hide(self) end
+    row.Show = function(self) shown = shown + 1; return show(self) end
+    for i = 1, 25 do G.UI:UpdateLoot() end
+    equal(hidden, 0); equal(shown, 0); assert(tip:IsShown()); equal(globalCalls, 0)
+    row:Click(); equal(H.reference, G.ItemKey(link))
+    row.link:Click(); equal(H.inserted, link)
+    row:GetScript("OnLeave")(); equal(tip:IsShown(), false); equal(globalCalls, 0)
 end)
 print(string.format("\n%d tests, %d failed. Synthetic sequences only; in-game verification is separate.", count, failed))
 os.exit(failed > 0 and 1 or 0)

@@ -95,6 +95,10 @@ function U:Create()
     self.settings = CreateFrame("Frame", nil, frame); self.settings:SetAllPoints()
     self.liveSetup = CreateFrame("Frame", nil, frame); self.liveSetup:SetAllPoints()
     self:CreateSetup(); self:CreateLiveSetup(); self:CreateResult(); self:CreateHistory(); self:CreateSettings(); self:CreateHUD()
+    self.itemTooltip = CreateFrame("GameTooltip", "GrindMeterValuationTooltip", UIParent, "GameTooltipTemplate")
+    self.itemTooltip:SetFrameStrata("TOOLTIP"); self.itemTooltip:SetClampedToScreen(true)
+    self.itemTooltip:EnableMouse(false); self.itemTooltip:Hide()
+    frame:SetScript("OnHide", function() self:HideItemTooltip() end)
     self.footer = W.Place(W.Text(frame, "", 9, W.colors.muted, 818), 22, 676)
     frame:Hide()
 end
@@ -381,6 +385,12 @@ function U:Rows(session)
     end
     return rows
 end
+function U:HideItemTooltip(row)
+    if not row or self.tooltipOwner == row then
+        if self.itemTooltip then self.itemTooltip:Hide() end
+        self.tooltipOwner = nil
+    end
+end
 function U:LootRow(index)
     if self.lootRows[index] then return self.lootRows[index] end
     local parent = self.lootScroll.content
@@ -405,40 +415,51 @@ function U:LootRow(index)
         end
     end)
     row:SetScript("OnEnter", function()
-        if not row.data or not row.data.itemLink then return end
-        GameTooltip:SetOwner(row, "ANCHOR_RIGHT"); GameTooltip:SetHyperlink(row.data.itemLink)
-        local price = row.price or {}
-        GameTooltip:AddLine(" "); GameTooltip:AddLine(G.L("vendorUnit") .. ": " .. F.Money(price.vendor), 1, 1, 1)
-        if price.ah then
-            local ah = price.ah
-            GameTooltip:AddLine(G.L("ahUnit") .. ": " .. F.Money(ah.unitPriceCopper) .. " - minimumBuyout", 1, 1, 1)
-            GameTooltip:AddLine(ah.sourceName .. " " .. (ah.sourceVersion or "") .. " - " .. ah.scope.region .. " / " .. ah.scope.realm .. " / " .. ah.scope.faction, .7, .75, .8, true)
-            GameTooltip:AddLine(ah.ageDays and G.L("dayAge", math.max(0, ah.ageDays - 1) * 24, (ah.ageDays + 1) * 24) or F.Date(ah.observedAt), .9, .75, .4, true)
-            if ah.stale then GameTooltip:AddLine(G.L("stale"), 1, .6, .2) end
-            if ah.ageUncertain then GameTooltip:AddLine(G.L("ageUncertain"), .9, .75, .4, true) end
-        else GameTooltip:AddLine(G.L("ahMissing"), .9, .7, .4) end
-        if price.tradeEligible == false then GameTooltip:AddLine(G.L("notTradable"), .8, .7, .6) end
-        if row.data.variantPolicy == "base-only" then GameTooltip:AddLine(G.L("baseVariant"), .8, .7, .6, true) end
-        local session = self:ActiveView()
-        if session and row.data.quantity then
-            local b = G.Calculator.PriceBreakdown(price, row.data.quantity, G.Storage.settings.method, session.fee or .05)
-            GameTooltip:AddLine(" "); GameTooltip:AddLine(G.L("priceBreakdown"), .88, .71, .4)
-            if b.grossTotal then
-                GameTooltip:AddDoubleLine(G.L("ahGrossTotal", b.quantity), F.Money(b.grossTotal), .8, .85, .9, 1, 1, 1)
-                GameTooltip:AddDoubleLine(G.L("ahFeeTotal", (session.fee or .05) * 100), "- " .. F.Money(b.feeTotal), .8, .85, .9, 1, 1, 1)
-                if b.netTotal then GameTooltip:AddDoubleLine(G.L("ahNetTotal"), F.Money(b.netTotal), .8, .85, .9, 1, 1, 1) end
+        if self.tooltipBusy or not row.data or not row.data.itemLink then return end
+        self.tooltipBusy = true
+        local ok = pcall(function()
+            local tip = self.itemTooltip
+            local price = row.price or {}
+            self.tooltipOwner = row
+            tip:ClearLines(); tip:SetOwner(row, "ANCHOR_RIGHT")
+            -- Hover is a cached valuation only. SetHyperlink invokes native item-data
+            -- processors and other addons; full native details remain on explicit click.
+            tip:SetText(price.name or G.L("itemLoading", row.data.itemID), 1, 1, 1, 1, true)
+            tip:AddLine(" "); tip:AddLine(G.L("vendorUnit") .. ": " .. F.Money(price.vendor), 1, 1, 1)
+            if price.ah then
+                local ah = price.ah
+                tip:AddLine(G.L("ahUnit") .. ": " .. F.Money(ah.unitPriceCopper) .. " - minimumBuyout", 1, 1, 1)
+                tip:AddLine(ah.sourceName .. " " .. (ah.sourceVersion or "") .. " - " .. ah.scope.region .. " / " .. ah.scope.realm .. " / " .. ah.scope.faction, .7, .75, .8, true)
+                tip:AddLine(ah.ageDays and G.L("dayAge", math.max(0, ah.ageDays - 1) * 24, (ah.ageDays + 1) * 24) or F.Date(ah.observedAt), .9, .75, .4, true)
+                if ah.stale then tip:AddLine(G.L("stale"), 1, .6, .2) end
+                if ah.ageUncertain then tip:AddLine(G.L("ageUncertain"), .9, .75, .4, true) end
+            else tip:AddLine(G.L("ahMissing"), .9, .7, .4) end
+            if price.tradeEligible == false then tip:AddLine(G.L("notTradable"), .8, .7, .6) end
+            if row.data.variantPolicy == "base-only" then tip:AddLine(G.L("baseVariant"), .8, .7, .6, true) end
+            local session = self:ActiveView()
+            if session and row.data.quantity then
+                local b = G.Calculator.PriceBreakdown(price, row.data.quantity, G.Storage.settings.method, session.fee or .05)
+                tip:AddLine(" "); tip:AddLine(G.L("priceBreakdown"), .88, .71, .4)
+                if b.grossTotal then
+                    tip:AddDoubleLine(G.L("ahGrossTotal", b.quantity), F.Money(b.grossTotal), .8, .85, .9, 1, 1, 1)
+                    tip:AddDoubleLine(G.L("ahFeeTotal", (session.fee or .05) * 100), "- " .. F.Money(b.feeTotal), .8, .85, .9, 1, 1, 1)
+                    if b.netTotal then tip:AddDoubleLine(G.L("ahNetTotal"), F.Money(b.netTotal), .8, .85, .9, 1, 1, 1) end
+                end
+                if b.vendorTotal then tip:AddDoubleLine(G.L("vendorTotal"), F.Money(b.vendorTotal), .8, .85, .9, 1, 1, 1) end
+                local via = b.via == "vendor" and G.L("vendor") or b.via == "AH" and "AH" or G.L("unknown")
+                tip:AddDoubleLine(G.L("chosenTotal", via, b.quantity), F.Money(b.total), .88, .71, .4, 1, 1, 1)
+                tip:AddLine(G.L("totalNotHourly"), .65, .7, .8, true)
+                if not row.data.sourceNpcID then tip:AddLine(G.L("excludedUnknown"), 1, .65, .3, true)
+                elseif not G.Session:IsContinuous(session) and row.data.sourceNpcID ~= session.selectedNpcID then tip:AddLine(G.L("otherMobValue"), .65, .7, .8, true) end
             end
-            if b.vendorTotal then GameTooltip:AddDoubleLine(G.L("vendorTotal"), F.Money(b.vendorTotal), .8, .85, .9, 1, 1, 1) end
-            local via = b.via == "vendor" and G.L("vendor") or b.via == "AH" and "AH" or G.L("unknown")
-            GameTooltip:AddDoubleLine(G.L("chosenTotal", via, b.quantity), F.Money(b.total), .88, .71, .4, 1, 1, 1)
-            GameTooltip:AddLine(G.L("totalNotHourly"), .65, .7, .8, true)
-            if not row.data.sourceNpcID then GameTooltip:AddLine(G.L("excludedUnknown"), 1, .65, .3, true)
-            elseif not G.Session:IsContinuous(session) and row.data.sourceNpcID ~= session.selectedNpcID then GameTooltip:AddLine(G.L("otherMobValue"), .65, .7, .8, true) end
-        end
-        GameTooltip:AddLine(G.L("linkHint"), .6, .7, .8, true)
-        GameTooltip:Show()
+            tip:AddLine(G.L("linkHint"), .6, .7, .8, true)
+            tip:Show()
+        end)
+        self.tooltipBusy = nil
+        if not ok then self:HideItemTooltip(row) end
     end)
-    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    row:SetScript("OnLeave", function() self:HideItemTooltip(row) end)
+    row:SetScript("OnHide", function() self:HideItemTooltip(row) end)
     self.lootRows[index] = row; return row
 end
 function U:UpdateLoot()
@@ -470,7 +491,6 @@ function U:UpdateLoot()
         local vb = G.Calculator.ItemValue(b.price, G.Storage.settings.method, s.fee) or -1
         return va == vb and a.displayName < b.displayName or va > vb
     end)
-    for _, row in ipairs(self.lootRows) do row:Hide() end
     local offset = self.lootTab == "possible" and 72 or 0
     self.lootEmpty:SetShown(#rows == 0 or self.lootTab == "possible")
     local emptyKey = self.lootTab == "possible" and (#rows > 0 and "catalogPartial" or "missingCatalog") or self.lootTab == "other" and "noOther" or "emptyLoot"
@@ -486,7 +506,9 @@ function U:UpdateLoot()
     if self.lootTab == "possible" and #rows == 0 then self.lootEmpty:SetText(G.L("missingCatalog") .. "\n\n" .. G.L("forecastMissing")) end
     if self.lootTab == "possible" and G.Session:IsContinuous(s) then self.lootEmpty:SetText(G.L("liveCatalog")) end
     for i, data in ipairs(rows) do
-        local row = self:LootRow(i); W.Place(row, 0, offset + (i - 1) * 57); row:Show(); row.data = data; row.price = data.price
+        local row = self:LootRow(i); row.data = data; row.price = data.price
+        W.Place(row, 0, offset + (i - 1) * 57)
+        if not row:IsShown() then row:Show() end
         row.link:SetShown(data.itemID ~= nil); row.link:SetText(G.L("link"))
         if data.npcID then
             row.icon:SetTexture(nil); row.title:SetText(data.name .. " - NPC " .. data.npcID)
@@ -507,6 +529,11 @@ function U:UpdateLoot()
             else detail = detail .. "  -  " .. source .. "  -  " .. recommendation end
             row.sub:SetText(detail)
         end
+    end
+    for i = #rows + 1, #self.lootRows do self.lootRows[i]:Hide() end
+    if self.tooltipOwner then
+        if self.tooltipOwner:IsShown() then self.tooltipOwner:GetScript("OnEnter")()
+        else self:HideItemTooltip() end
     end
     self.lootScroll.content:SetHeight(math.max(137, offset + #rows * 57))
 end

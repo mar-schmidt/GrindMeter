@@ -11,14 +11,27 @@ function P.ScopeMatches(a, b)
     end
     return true
 end
-function P:ItemInfo(link)
+function P:ItemInfo(link, passive)
+    local key, id = G.ItemKey(link), G.ItemID(link)
+    if not key or not id then return {} end
+    self.itemCache = self.itemCache or {}
+    self.retryAt = self.retryAt or {}
+    self.requested = self.requested or {}
+    self.waitingLinks = self.waitingLinks or {}
+    if self.itemCache[key] then return G.Copy(self.itemCache[key]) end
+    self.waitingLinks[id] = self.waitingLinks[id] or {}
+    self.waitingLinks[id][key] = link
+    local now = GetTime()
+    if not passive and now < (self.retryAt[id] or 0) then return {} end
+    self.retryAt[id] = now + 5
+    if not passive then self.requested[id] = true end
     local fn = C_Item and C_Item.GetItemInfo or GetItemInfo
     local values = fn and {fn(link)} or {}
     if not values[1] then
-        local id = G.ItemID(link)
-        if id and C_Item and C_Item.RequestLoadItemDataByID then
-            self.requested = self.requested or {}
-            if not self.requested[id] then self.requested[id] = true; C_Item.RequestLoadItemDataByID(id) end
+        -- A load notification can precede complete metadata. Never issue another
+        -- explicit load from its handler; that creates a self-sustaining event loop.
+        if not passive and C_Item and C_Item.RequestLoadItemDataByID then
+            C_Item.RequestLoadItemDataByID(id)
         end
         return {}
     end
@@ -31,8 +44,38 @@ function P:ItemInfo(link)
         if not ok or issecretvalue and issecretvalue(accountBound) then eligible = nil
         elseif accountBound then eligible = false end
     end
-    return {name = values[1], link = values[2], quality = values[3], icon = values[10], vendor = values[11],
+    local value = {name = values[1], link = values[2], quality = values[3], icon = values[10], vendor = values[11],
         tradeEligible = eligible, bindType = binding, classID = classID}
+    self.itemCache[key] = G.Copy(value)
+    self.cachedIDs = self.cachedIDs or {}; self.cachedIDs[id] = true
+    self.requested[id] = nil; self.waitingLinks[id][key] = nil
+    if not next(self.waitingLinks[id]) then self.waitingLinks[id] = nil end
+    return value
+end
+function P:ItemDataReceived(id, success)
+    -- Other addons and ordinary bag tooltips also emit these events. Only consume
+    -- our outstanding requests, and merge the two item-data event types.
+    if not self.requested or not self.requested[id] then return false end
+    self.requested[id] = nil
+    if success ~= false then
+        self.pendingItems = self.pendingItems or {}; self.pendingItems[id] = true
+    end
+    return true
+end
+function P:ProcessPendingItems()
+    local pending = self.pendingItems
+    if not pending or not next(pending) then return false end
+    self.pendingItems = nil
+    local changed = false
+    for id in pairs(pending) do
+        local links = G.Copy(self.waitingLinks and self.waitingLinks[id] or {})
+        for _, link in pairs(links) do self:ItemInfo(link, true) end
+        if self.cachedIDs and self.cachedIDs[id] then
+            self:RefreshActiveQuotes(id, true); changed = true
+        end
+    end
+    if changed and G.UI then G.UI.dirty = true end
+    return true
 end
 function P:Imported(link, scope, now)
     local data = GrindMeterPriceData
@@ -68,8 +111,8 @@ function P:Auctionator(link, scope, now)
         ageSeconds = (ageDays + 1) * 86400, ageLowerSeconds = math.max(0, ageDays - 1) * 86400,
         ageUpperSeconds = (ageDays + 1) * 86400, scope = G.Copy(scope)}
 end
-function P:Resolve(link, scope, now)
-    local value = self:ItemInfo(link)
+function P:Resolve(link, scope, now, passive)
+    local value = self:ItemInfo(link, passive)
     local ah = self:Imported(link, scope, now) or self:Auctionator(link, scope, now)
     if ah then
         local threshold = (G.Storage.settings.staleHours or 24) * 3600
@@ -89,7 +132,7 @@ local function retainKnown(replacement, old)
     end
     return replacement
 end
-function P:RefreshActiveQuotes(itemID)
+function P:RefreshActiveQuotes(itemID, passive)
     local session = G.Session.s
     if not session or self.refreshing then return false end
     self.refreshing = true
@@ -97,7 +140,7 @@ function P:RefreshActiveQuotes(itemID)
     for _, receipt in ipairs(session.lootReceipts) do
         if (not itemID or receipt.itemID == itemID) and not seen[receipt.variantKey] then
             seen[receipt.variantKey] = true
-            local ok, replacement = pcall(self.Resolve, self, receipt.itemLink, session, time())
+            local ok, replacement = pcall(self.Resolve, self, receipt.itemLink, session, time(), passive)
             if ok then
                 session.priceSnapshot[receipt.variantKey] = retainKnown(replacement, session.priceSnapshot[receipt.variantKey])
             end

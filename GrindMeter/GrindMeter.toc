@@ -2,7 +2,7 @@
 ## Title: GrindMeter
 ## Notes: Measure your grind. Understand your kills, XP and loot value.
 ## Author: Marcus Schmidt
-## Version: 0.2.0
+## Version: 0.2.1
 ## SavedVariables: GrindMeterDB
 ## OptionalDeps: Auctionator
 ## IconTexture: Interface\Icons\INV_Misc_PocketWatch_01
