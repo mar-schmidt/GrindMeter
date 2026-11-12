@@ -1,10 +1,10 @@
-# Testresultat — GrindMeter 0.1.1
+# Testresultat — GrindMeter 0.1.2
 
 Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, inte spelklient.
 
 ## Genomfört
 
-**54 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
+**64 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
 
 | Område | Automatiskt verifierat |
 |---|---|
@@ -16,7 +16,9 @@ Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, int
 | Loot | Endast bekräftade receipts, fulla väskor ger inget värde, dubbla lineID ignoreras, en tom LOOT_READY-snapshot kan kompletteras vid OPENED, klientdispatch använder full itemlänk och rätt lineID-position |
 | Källor | Blandade source-GUID:n, tidigare kropp, professionsloot och öppnade items blir inte säker vanlig mobloot; gruppmynt är konservativt oattribuerade |
 | Värdering | Vendor 23 s och 1 G 38 s/h; AH efter 5 % 31 s 50 k och 1 G 89 s/h; vendor vinner över sämre AH; saknad metadata blir delvärde |
-| Priser | Fel scope avvisas, gammalt pris märks, Auctionator-adapter använder rätt publika anrop, suffix får ingen generisk fallback och bound loot får inget AH-värde |
+| Priser | Fel scope avvisas, scan-dygn ger korrekt färsk/osäker/gammal-status, Auctionator-adapter använder publika anrop/notifiering, bind-on-use tillåts, kontobundna items och suffix får ingen generisk AH-värdering |
+| Prisuppdatering | Saknat pris återhämtas med stängt fönster, sen itemdata fyller AH/behörighet, paus ändrar ingen tid/mängd, API-avbrott tappar inte känt citat ens vid avslut, avslutad historik ändras inte |
+| Prisförklaring | Sparade styckprisexempel för Long Soft Tail, Bristly Whisker, Iron Ore och Heavy Stone; avgift, antal, vendorval och tooltipens radtotal/okänd källa |
 | Historik | Prisbild är fryst, alternativ värdering ändrar inte originalet, 50 pass behålls, radering bevarar settings och korrupt sparad data hindrar inte ny start |
 | Dropdata | 2/8 kroppar och 6 enheter = 25 % och 0,75 enheter/kropp; olootade kills används inte som nämnare; egna fullt observerade kroppar hålls per NPC |
 | Katalog | 165 NPC-ID:n/1 264 rader; fönsterdata är separat från killprognoser; sällsynt syntetisk prognos bevarar fraktionell koppar och höjer inte uppmätt värde |
@@ -30,6 +32,21 @@ De 32 acceptans-ID:na har syntetiska testfall, med AT-21/22 i ett gemensamt fall
 ## Uppstartsregression i 0.1.1
 
 Version 0.1.0 gav en rapporterad blockeringsruta vid uppstart i WoW. 0.1.1 tar bort förbjuden combatlogregistrering och använder det dokumenterade separata `PARTY_KILL(attackerGUID, targetGUID)`-eventet. Åtta nya regressionstester simulerar bland annat att förbjuden registrering kan utlösa Blizzard-varningen utan Lua-fel: exakt noll sådana försök tillåts. Kill-/XP-flödet testas även med frånvarande combatlog-API, hemliga identiteter, pets, andra mobnamn, paus och timeout. Den korrigerade versionen behöver fortfarande bekräftas i målklienten.
+
+## Prisgranskning i 0.1.2
+
+Auctionator 345:s installerade API, tooltiplogik och ModernAH-marknadsval har lästs. Fyra sparade GrindMeter-citat jämfördes med motsvarande minimum buyout i Auctionators sparade databas. Alla matchade per styck i koppar:
+
+| Item | AH-styckpris | Vendor per styck |
+|---|---|---|
+| Long Soft Tail (1688) | 8 s 70 k | 8 s 6 k |
+| Bristly Whisker (1686) | 7 s 43 k | 7 s 33 k |
+| Iron Ore (2772) | 3 s 7 k | 1 s 50 k |
+| Heavy Stone (2838) | 4 s 55 k | 60 k |
+
+Detta verifierar sparade värden och styckprisenhet, inte aktuella livepriser. Bristly Whisker ger lägre AH-netto än vendor vid 5 % avgift, så vendor är korrekt rekommendation. Long Soft Tail × 4 ger 3 480 koppar före avgift och 3 306 efter avgift. Inga kontouppgifter eller prisdatabaser ingår i paketet.
+
+Tio nya regressionstester täcker prisuppdatering, historik, paus, API-avbrott vid avslut, bindning, prisålder, beräkning och tooltip. Sen itemdata och databasnotifiering provas med syntetiska API-svar; faktisk notifiering i spelklienten återstår.
 
 ## Visuell granskning
 

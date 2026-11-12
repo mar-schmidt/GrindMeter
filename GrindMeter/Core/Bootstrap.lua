@@ -11,6 +11,7 @@ local function initialize()
     G.Trackers:Reset()
     G.Session:Restore(GetTime())
     G.UI:Create(); G.Minimap:Create()
+    G.Prices:Initialize()
     G.Session.OnStopped = function()
         G.Print(G.L("saved")); G.UI.view = nil; G.UI.newMode = nil; G.UI.revalued = nil
         if not InCombatLockdown() then G.UI:Refresh() else G.UI.dirty = true; G.UI:UpdateHUD() end
@@ -35,6 +36,8 @@ frame:SetScript("OnEvent", function(_, event, ...)
         if ... == addonName then
             loaded = true
             if not initialized and IsLoggedIn() then initialize() end
+        elseif ... == "Auctionator" and initialized then
+            G.Prices:Initialize(); G.Prices:RefreshActiveQuotes()
         end
         return
     end

@@ -21,7 +21,7 @@ Installera testreleasen. Använd `/gm diagnostics` före och efter ett kort pass
 | 13 | Tio minuters timeout i strid. Inga events vid/efter stopptiden tas med och inget stort fönster öppnas automatiskt. | Ej speltestat |
 | 14 | `/reload` och normal logout mitt i pass. Återställ pausat, offline-tid exkluderad och tidigare mängder bevarade. | Ej speltestat |
 | 15 | Native itemtooltip, klick för detaljer, spelets Mac-modifierare och knappen Länka till chatten. | Ej speltestat |
-| 16 | Auctionator-skanning i rätt region/realm/faction. Kontrollera styckpris, dygnsålder, suffixfallback och bound-items. | Ej speltestat |
+| 16 | Auctionator-skanning på aktuell marknad. Kontrollera styckpris mot eventuell Shift-stacktooltip, avgift/antal/radtotal, dygnsålder, suffixfallback och bind-on-use/kontobundna items. Saknat pris ska fyllas efter lyckad itemladdning eller färdig skanning även med stängt GrindMeter-fönster. Historik ska behålla sitt original. | Ej speltestat |
 | 17 | Kontrollera faktisk faction-/neutral-AH-avgift och avrundning. 5 % i releasen är endast ett modellantagande. | Ej speltestat |
 | 18 | Verklig lokal prisfil: import, reload, fel scope, gammal fil och omvärdering av historik utan att originalet ändras. | Ej speltestat |
 | 19 | Svenska UI:t i engelsk klient på Mac, engelskt UI, andra upplösningar/UI-skalor, dragpositioner och fyrkantig minimap. | Ej speltestat |

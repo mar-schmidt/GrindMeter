@@ -2,11 +2,11 @@
 
 Ett fristående addon för **WoW Forever** som mäter kills/h, faktiskt erhållen mob-XP/h och värdet av loot du plockar upp. Svenska är förvalt språk; engelska väljs under Inställningar.
 
-**0.1.1 är en testrelease med korrigerad uppstart.** Version 0.1.0 kunde utlösa Blizzards blockeringsruta genom en förbjuden combatlogregistrering. Nu används det separata `PARTY_KILL`-eventet; ingen combatlog registreras eller läses. Automatiska tester och en simulerad UI-granskning är genomförda. Den korrigerade insamlingen har ännu inte verifierats inne i WoW. Den lokala installationens metadata är kontrollerad: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md) för återstående verifiering. Detta är inte ett påstående att samtliga P0-krav är slutgodkända.
+**0.1.2 rättar prisuppdateringen och förklarar varje lootrads värde.** AH-priser uppdateras när Auctionator skannar eller saknad itemdata laddas. Tooltipen visar styckpris, antal, avgift och valt totalvärde. Korrigeringen från 0.1.1 för Blizzards blockeringsruta ingår också. Automatiska tester är genomförda; ändringarna behöver fortfarande bekräftas inne i WoW. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
 
 ## Installera
 
-1. Ladda ned **GrindMeter-0.1.1.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
+1. Ladda ned **GrindMeter-0.1.2.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
 2. Packa upp. Flytta hela mappen **GrindMeter** till spelets `Interface/AddOns`.
 3. Starta om WoW om mappen är ny. Kontrollera att GrindMeter är aktiverat i addonlistan. Efter uppdatering av ett redan upptäckt addon räcker normalt `/reload`.
 
@@ -24,7 +24,7 @@ C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\GrindMeter\G
 
 Vid uppdatering: ersätt den gamla addonmappen, behåll spelets SavedVariables och kör `/reload`. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
 
-TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.1`-mapp gör att spelet inte hittar addonet.
+TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.2`-mapp gör att spelet inte hittar addonet.
 
 ## Din första mätning
 
@@ -77,7 +77,13 @@ Klicka på **G/h-rutan** eller byt under Inställningar för att växla värderi
 
 **Auctionator är valfritt.** Version 345:s installerade publika API är granskat, och adaptern är automatiskt testad med syntetiska API-svar. Besök AH och gör en skanning i Auctionator; GrindMeter läser dess senast skannade lägsta buyout per styck. En tom prisdatabas ger **AH-data saknas** och användbara vendorresultat.
 
-Priserna gäller den körande klientens region, realm och faction. Auctionators prisålder har dygnsupplösning, vilket redovisas som ett intervall i tooltipen; 24 timmar är förvald konservativ varningsgräns. Ett skannat pris beskrivs aldrig som ett livepris. Slumpmässiga suffix får inget generiskt AH-pris. BoP-/questitems föreslås inte säljas på AH.
+Priserna hämtas från Auctionators aktiva marknad. I Forever kan denna vara gemensam för ett regionalt ruleset, exempelvis PvE; GrindMeter väljer inte någon annan databas. Auktionens senast skannade styckpris används direkt, även om Auctionators egen tooltip visar stackpriset när Shift hålls nere.
+
+Under ett aktivt eller pausat pass uppdateras priser när Auctionator rapporterar en färdig databasuppdatering eller itemdata blir tillgänglig. Saknade priser kan därmed fyllas i även med huvudfönstret stängt. Ett tillfälligt misslyckat uppslag behåller ett tidigare känt pris med dess ursprungliga datum.
+
+Hovra över en rad i **Din loot** för att se AH-pris före avgift × antal, beräknad AH-avgift, nettovärde, vendorvärde och det valda värdet för hela raden. Exempel: **4 × 8 s 70 k = 34 s 80 k**, eller **33 s 6 k** efter 5 % avgift. G/h räknas sedan från passets totala värde och mättid. Loot utan säker mobkälla visas men ingår inte i mobbsummorna.
+
+Auctionators prisålder har dygnsupplösning. Samma scan-dygn innebär 0–24 timmar, föregående scan-dygn 0–48 timmar. Tooltipen skiljer möjlig från säker överskridning av den valda åldersgränsen, förvalt 24 timmar. Ett skannat pris beskrivs aldrig som ett livepris. Slumpmässiga suffix får inget generiskt AH-pris. BoP-, quest- och kontobundna items föreslås inte säljas på AH; obundna, BoE- och bind-on-use-items kan värderas.
 
 Ett alternativ är en versionsmärkt lokal JSON-prisexport som kompileras med:
 

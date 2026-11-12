@@ -65,6 +65,16 @@ local strings = {
     recommendation = {"Försäljning", "Sell via"}, notTradable = {"Ej tillåten på AH", "Cannot be auctioned"},
     ahMissing = {"AH-data saknas", "AH data unavailable"}, stale = {"inaktuellt pris", "stale price"},
     dayAge = {"Prisålder vid värdering: %d–%d timmar (dygnsupplösning)", "Price age at valuation: %d–%d hours (day resolution)"},
+    ageUncertain = {"Exakt skanntid saknas; priset kan ha passerat åldersgränsen.", "Exact scan time is unavailable; price may have passed the age limit."},
+    priceBreakdown = {"Värdering av denna rad", "This row's valuation"},
+    ahGrossTotal = {"AH-pris före avgift · %d st", "AH price before cut · %d items"},
+    ahFeeTotal = {"Modellantagande: %.0f %% AH-avgift", "Model assumption: %.0f%% AH cut"},
+    ahNetTotal = {"AH-värde efter avgift · hela raden", "AH value after cut · entire row"},
+    vendorTotal = {"Vendorvärde · hela raden", "Vendor value · entire row"},
+    chosenTotal = {"Valt värde · %s · %d st", "Selected value · %s · %d items"},
+    totalNotHourly = {"Radens värde, före omräkning till G/h. Avrundning görs på totalsumman.", "Row value before conversion to G/h. Rounding is applied to the total."},
+    excludedUnknown = {"Ingår inte i mobbsummorna: säker lootkälla saknas.", "Excluded from mob totals: loot source is unconfirmed."},
+    otherMobValue = {"Ingår i hela passet och källmobbens resultat.", "Included in whole-session and source-mob totals."},
     ahHelp = {"Auctionator: besök AH och gör en skanning. Priserna läses automatiskt. Alternativ: en importerad prisfil.", "Auctionator: visit the AH and run a scan. Prices are read automatically. Alternative: an imported price file."},
     scope = {"Marknad", "Market"},
     diagnose = {"Kopiera diagnostik", "Copy diagnostics"},
@@ -84,7 +94,7 @@ local strings = {
     localBias = {"Egen observation · urvalet kan påverkas av lootval och gruppfördelning.", "Own observation · loot choices and group distribution can bias the sample."},
     baseVariant = {"Katalogpost för grunditem. Suffixvarianter kan ha andra priser.", "Base-item catalog entry. Suffix variants may have different prices."},
     rewardMissing = {"XP eller loot kan sakna säker koppling. Berörda nyckeltal visas som delvärden.", "Some XP or loot lacks confirmed attribution. Affected metrics are shown as subtotals."},
-    diagnosticsWarning = {"Klienttest återstår · 0.1.1", "In-game validation pending · 0.1.1"},
+    diagnosticsWarning = {"Klienttest återstår · 0.1.2", "In-game validation pending · 0.1.2"},
 }
 G.Strings = strings
 function G.L(key, ...)

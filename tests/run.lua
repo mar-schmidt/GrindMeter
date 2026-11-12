@@ -360,6 +360,115 @@ test("community catalog is separate, window-based and excluded from kill forecas
     for _, row in ipairs(rows) do equal(row.category, "observed"); assert(row.windowCount > 0 and row.reporters >= 3) end
     equal(G.Calculator.Forecast(rows, 100, function() return 10000 end, .05).value, nil)
 end)
+test("Auctionator database updates recover an initially missing quote with the main window closed", function()
+    local G = H.setup(true); local quote, callback, subscriptions = nil, nil, 0
+    H.items[1] = {vendor = 200}
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return quote end,
+        GetAuctionAgeByItemLink = function() return 0 end, RegisterForDBUpdate = function(caller, fn)
+            equal(caller, "GrindMeter"); callback = fn; subscriptions = subscriptions + 1
+        end}}}
+    G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
+    local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 3), 0); G.Trackers:Receipt(link, 3, 1, 0)
+    equal(s.priceSnapshot[G.ItemKey(link)].ah, nil); G.UI.main:Hide()
+    quote = 500; assert(callback); callback()
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.unitPriceCopper, 500)
+    near(G.Calculator.Value(s, 259055, "best").value, 1425)
+    equal(#s.lootReceipts, 1); equal(s.lootReceipts[1].quantity, 3); equal(G.UI.main:IsShown(), false)
+    G.Prices:Initialize(); equal(subscriptions, 1)
+end)
+test("late item metadata refreshes both AH and eligibility for an active session", function()
+    local G = H.setup(); local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return H.items[1] and 1000 or nil end,
+        GetAuctionAgeByItemLink = function() return 0 end}}}
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 2), 0); G.Trackers:Receipt(link, 2, 1, 0)
+    equal(G.Calculator.Value(s, 259055, "best").unknown, 2)
+    H.items[1] = {vendor = 100}; G.Client:Dispatch("ITEM_DATA_LOAD_RESULT", 1, true)
+    near(G.Calculator.Value(s, 259055, "best").value, 1900); equal(#s.lootReceipts, 1)
+    equal(s.priceSnapshot[G.ItemKey(link)].tradeEligible, true)
+end)
+test("Auctionator callback never rewrites a completed session's price snapshot", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local quote, callback = 500, nil
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return quote end,
+        GetAuctionAgeByItemLink = function() return 0 end, RegisterForDBUpdate = function(_, fn) callback = fn end}}}
+    G.Prices:Initialize(); local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 1), 0); G.Trackers:Receipt(link, 1, 1, 0)
+    G.Session:Stop(60, time(), "manual"); quote = 1000; callback()
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.unitPriceCopper, 500)
+    equal(G.Prices:Snapshot(s)[G.ItemKey(link)].ah.unitPriceCopper, 1000)
+end)
+test("repricing a paused session changes no measured time or received quantities", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local s = H.start(G)
+    local guid = H.kill(G); local link = H.link(1); local quote = 500
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return quote end, GetAuctionAgeByItemLink = function() return 0 end}}}
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 2), 0); G.Trackers:Receipt(link, 2, 1, 0)
+    G.Session:Pause(H.at(60)); quote = 1000; G.Prices:RefreshActiveQuotes()
+    near(s.measuredSeconds, 60); equal(s.lootReceipts[1].quantity, 2); equal(s.state, "paused")
+    near(G.Calculator.Value(s, 259055, "best").value, 1900)
+end)
+test("a temporary price API failure retains the last documented quote", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    local quote = 500
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return quote end, GetAuctionAgeByItemLink = function() return 0 end}}}
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 1), 0); G.Trackers:Receipt(link, 1, 1, 0)
+    local capturedAt = s.priceSnapshot[G.ItemKey(link)].ah.importedAt
+    quote = nil; H.at(60); G.Prices:RefreshActiveQuotes()
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.unitPriceCopper, 500)
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.importedAt, capturedAt)
+end)
+test("stopping during a price API outage preserves the active quote, not a fabricated fresh quote", function()
+    local G = H.setup(); H.items[1] = {vendor = 100}; local quote = 500
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return quote end, GetAuctionAgeByItemLink = function() return 0 end}}}
+    local s = H.start(G); local guid = H.kill(G); local link = H.link(1)
+    G.Trackers:OpenLoot(H.slot(G, guid, link, 3), 0); G.Trackers:Receipt(link, 3, 1, 0)
+    local capturedAt = s.priceSnapshot[G.ItemKey(link)].ah.importedAt
+    quote = nil; H.at(60); G.Session:Stop(60, time(), "manual")
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.unitPriceCopper, 500)
+    equal(s.priceSnapshot[G.ItemKey(link)].ah.importedAt, capturedAt)
+    near(G.Calculator.Value(s, 259055, "best").value, 1425)
+    equal(G.Prices:Snapshot(s)[G.ItemKey(link)].ah, nil)
+end)
+test("new bind-on-use loot is eligible; account-bound-until-equipped loot is not", function()
+    local G = H.setup(); H.items[1] = {vendor = 100, bind = 3}
+    equal(G.Prices:ItemInfo(H.link(1)).tradeEligible, true)
+    C_Item.IsItemBindToAccountUntilEquip = function() return true end
+    equal(G.Prices:ItemInfo(H.link(1)).tradeEligible, false)
+end)
+test("scan-day precision distinguishes fresh, uncertain and definitely stale prices", function()
+    local G = H.setup(); local ageDays = 0
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return 500 end, GetAuctionAgeByItemLink = function() return ageDays end}}}
+    local p = G.Prices:Resolve(H.link(1), G.Client:Context(), time())
+    equal(p.ah.stale, false); equal(p.ah.ageUncertain, false)
+    ageDays = 1; p = G.Prices:Resolve(H.link(1), G.Client:Context(), time())
+    equal(p.ah.ageLowerSeconds, 0); equal(p.ah.ageUpperSeconds, 172800); equal(p.ah.stale, false); equal(p.ah.ageUncertain, true)
+    ageDays = 2; p = G.Prices:Resolve(H.link(1), G.Client:Context(), time())
+    equal(p.ah.stale, true)
+end)
+test("recorded unit-price examples distinguish gross, fee, stack total and vendor recommendation", function()
+    -- Fixed regression values from the 2026-11-12 offline comparison, not shipped market prices.
+    local G = H.setup()
+    local tail = G.Calculator.PriceBreakdown({vendor = 806, tradeEligible = true, ah = {unitPriceCopper = 870}}, 4, "best", .05)
+    near(tail.grossTotal, 3480); near(tail.feeTotal, 174); near(tail.netTotal, 3306); near(tail.total, 3306); equal(tail.via, "AH")
+    local whisker = G.Calculator.PriceBreakdown({vendor = 733, tradeEligible = true, ah = {unitPriceCopper = 743}}, 2, "best", .05)
+    near(whisker.netTotal, 1411.7); near(whisker.total, 1466); equal(whisker.via, "vendor")
+    local stone = G.Calculator.PriceBreakdown({vendor = 60, tradeEligible = true, ah = {unitPriceCopper = 455}}, 7, "best", .05)
+    near(stone.total, 3025.75)
+    local ore = G.Calculator.PriceBreakdown({vendor = 150, tradeEligible = true, ah = {unitPriceCopper = 307}}, 4, "best", .05)
+    near(ore.total, 1166.6)
+end)
+test("loot tooltip explains the exact row total and exclusion of unsourced loot", function()
+    local G = H.setup(true); G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
+    H.items[1] = {vendor = 806}; local s = H.start(G); G.Storage.settings.method = "best"
+    Auctionator = {API = {v1 = {GetAuctionPriceByItemLink = function() return 870 end, GetAuctionAgeByItemLink = function() return 0 end}}}
+    G.Trackers:Receipt(H.link(1), 4, 1, 0); G.UI:Refresh()
+    local lines = {}
+    GameTooltip = setmetatable({AddLine = function(_, t) lines[#lines + 1] = t end,
+        AddDoubleLine = function(_, a, b) lines[#lines + 1] = a .. ": " .. b end}, {__index = function() return function() end end})
+    G.UI.lootRows[1].scripts.OnEnter()
+    local combined = G.F.Plain(table.concat(lines, "\n"))
+    assert(combined:find("0g 33s 6c", 1, true)); assert(combined:find(G.L("excludedUnknown"), 1, true))
+    equal(G.Calculator.Value(s, s.selectedNpcID, "best").value, 0)
+end)
 test("UI smoke: setup, target selection, start, hide, pause, results, history and language", function()
     local G = H.setup(true); G.eventFrame.scripts.OnEvent(G.eventFrame, "ADDON_LOADED", "GrindMeter")
     G.UI:Toggle(); assert(G.UI.main:IsShown()); G.UI:ChooseTarget(); G.UI.startButton:Click()

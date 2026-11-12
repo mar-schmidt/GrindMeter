@@ -38,13 +38,16 @@ Den installerade **Auctionator 345** har ett uttryckligt publikt API i `Source/A
 ```lua
 Auctionator.API.v1.GetAuctionPriceByItemLink("GrindMeter", itemLink)
 Auctionator.API.v1.GetAuctionAgeByItemLink("GrindMeter", itemLink)
+Auctionator.API.v1.RegisterForDBUpdate("GrindMeter", callback)
 ```
 
-Pris är per styck i koppar, senaste skannade minimum buyout. Ålder är hela scan-dygn, inte ett precist scan-klockslag. GrindMeter sparar `observedAtPrecision = "day"` och visar åldersintervallet. Varning utgår konservativt från intervallets övre gräns. `sourceName`, addonversion, importtid, ålder och faktisk scope följer med varje quote.
+Pris är per styck i koppar, senaste skannade minimum buyout. Auctionators tooltip kan visa stackpris med Shift; det förändrar inte API:ts styckpris. Ålder är skillnaden mellan scan-dygn, inte ett precist scan-klockslag. För ålder d dygn är intervallet `max(0, d-1) × 24` till `(d+1) × 24` timmar. GrindMeter sparar `observedAtPrecision = "day"`, båda gränserna och visar intervallet. `stale` innebär att även den undre gränsen når vald åldersgräns; `ageUncertain` innebär att den kan ha passerats. `sourceName`, addonversion, importtid, ålder och klientkontext följer med varje quote.
 
-LegacyAH:s databas väljs av Auctionator per aktuell realm/faction, i den separata spelinstallationens SavedVariables. GrindMeter anropar endast det publika API:t och jämför mot körande region/realm/faction/spelvariant; det öppnar inte en annan marknads databas. Random-suffix-priser avvisas för denna provider eftersom exakt suffixvärde inte kan garanteras.
+Auctionator väljer själv den aktiva marknaden. Installerad ModernAH kan använda ett regionalt ruleset, exempelvis PvE, i stället för klientens interna realmnamn; LegacyAH har ett annat databasval. GrindMeter anropar endast det publika API:t, binder värderingen till körande region/realm/faction/spelvariant och öppnar aldrig en alternativ databas. Dessa kontextfält beskriver klienten, inte en garanti om separat AH per faction. Random-suffix-priser avvisas för denna provider eftersom exakt suffixvärde inte kan garanteras.
 
-Ingen kopia av Auctionators kod eller prisdatabas levereras. SnapPrice är inte installerat och inget SnapPrice-API har gissats fram. In-game-anrop och prisernas verkliga datatäckning återstår att prova.
+`RegisterForDBUpdate` anropar omvärdering efter Auctionators skanning/prisbearbetning. Lyckade itemdata-events provar också priset igen, vilket rättar ett tidigare permanent saknat uppslag. Endast aktiva/pausade sessionscitat ersätts; mängder och mättid påverkas inte. Ett tillfälligt saknat API-svar behåller föregående kända citat med dess ursprungliga tidsmetadata, även när passet avslutas.
+
+Fyra sparade GrindMeter-citat har jämförts med motsvarande minimum buyout i installerade Auctionators sparade databas och matchade exakt per styck. Detta är en filgranskning, inte en körning av integrationen inne i WoW. Ingen kopia av Auctionators kod eller prisdatabas levereras. SnapPrice är inte installerat och inget SnapPrice-API har gissats fram. In-game-anrop och prisernas verkliga datatäckning återstår att prova.
 
 ## Alternativt importformat
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2 — 2026-11-12
+
+- Rättar saknade AH-priser som tidigare kunde fastna under hela passet. Auctionators publika databasnotifiering och lyckade itemdata-events uppdaterar nu aktiva/pausade pass även när fönstret är stängt.
+- Behåller tidigare känt pris och ursprungligt datum om ett uppslag tillfälligt misslyckas, även vid avslut. Avslutade pass behåller sin frysta prisbild.
+- Tooltipen för mottagen loot visar AH-styckpris, antal, avgift, AH-netto, vendorvärde och valt radtotal. Osäker lootkälla förklaras i samma tooltip.
+- Tillåter AH-värdering av bind-on-use-items och utesluter kontobundna items när klientens API anger detta.
+- Rättar åldersintervallet för Auctionators scan-dygn. Dagens skanning märks inte längre automatiskt som gammal vid standardgränsen 24 timmar.
+- Tio nya regressionstester; totalt 64 Lua-tester och 3 Python-tester. Fyra granskade sparade styckpriser matchar Auctionators databas; ingen generell stackmultipliceringsbugg hittades.
+
+Korrigeringen är automatiskt testad. Prisuppdatering och tooltip behöver fortfarande bekräftas inne i WoW.
+
 ## 0.1.1 — 2026-11-12
 
 - Åtgärdar uppstartsmeddelandet “GrindMeter has been blocked from an action only available to the Blizzard UI”.

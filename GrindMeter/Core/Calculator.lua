@@ -17,6 +17,15 @@ function C.ItemValue(price, method, fee)
     if auction ~= nil and (vendor == nil or auction > vendor) then return auction, "AH" end
     return vendor, vendor ~= nil and "vendor" or "unknown"
 end
+function C.PriceBreakdown(price, quantity, method, fee)
+    local unit, via = C.ItemValue(price, method, fee)
+    local gross = price.ah and price.ah.unitPriceCopper or nil
+    return {quantity = quantity, unit = unit, via = via, total = unit and quantity * unit or nil,
+        grossUnit = gross, grossTotal = gross and gross * quantity or nil,
+        feeTotal = gross and gross * quantity * fee or nil,
+        netTotal = gross and price.tradeEligible == true and gross * quantity * (1 - fee) or nil,
+        vendorTotal = price.vendor and price.vendor * quantity or nil}
+end
 function C.Value(session, npcID, method, prices)
     local result = {value = 0, coins = 0, unknown = 0, stale = 0, ahMissing = 0, count = 0}
     for source, copper in pairs(session.coinsByNpcID or {}) do

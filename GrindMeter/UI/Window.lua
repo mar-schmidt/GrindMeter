@@ -333,11 +333,28 @@ function U:LootRow(index)
             local ah = price.ah
             GameTooltip:AddLine(G.L("ahUnit") .. ": " .. F.Money(ah.unitPriceCopper) .. " · minimumBuyout", 1, 1, 1)
             GameTooltip:AddLine(ah.sourceName .. " " .. (ah.sourceVersion or "") .. " · " .. ah.scope.region .. " / " .. ah.scope.realm .. " / " .. ah.scope.faction, .7, .75, .8, true)
-            GameTooltip:AddLine(ah.ageDays and G.L("dayAge", ah.ageDays * 24, (ah.ageDays + 1) * 24) or F.Date(ah.observedAt), .9, .75, .4, true)
+            GameTooltip:AddLine(ah.ageDays and G.L("dayAge", math.max(0, ah.ageDays - 1) * 24, (ah.ageDays + 1) * 24) or F.Date(ah.observedAt), .9, .75, .4, true)
             if ah.stale then GameTooltip:AddLine(G.L("stale"), 1, .6, .2) end
+            if ah.ageUncertain then GameTooltip:AddLine(G.L("ageUncertain"), .9, .75, .4, true) end
         else GameTooltip:AddLine(G.L("ahMissing"), .9, .7, .4) end
         if price.tradeEligible == false then GameTooltip:AddLine(G.L("notTradable"), .8, .7, .6) end
         if row.data.variantPolicy == "base-only" then GameTooltip:AddLine(G.L("baseVariant"), .8, .7, .6, true) end
+        local session = self:ActiveView()
+        if session and row.data.quantity then
+            local b = G.Calculator.PriceBreakdown(price, row.data.quantity, G.Storage.settings.method, session.fee or .05)
+            GameTooltip:AddLine(" "); GameTooltip:AddLine(G.L("priceBreakdown"), .88, .71, .4)
+            if b.grossTotal then
+                GameTooltip:AddDoubleLine(G.L("ahGrossTotal", b.quantity), F.Money(b.grossTotal), .8, .85, .9, 1, 1, 1)
+                GameTooltip:AddDoubleLine(G.L("ahFeeTotal", (session.fee or .05) * 100), "− " .. F.Money(b.feeTotal), .8, .85, .9, 1, 1, 1)
+                if b.netTotal then GameTooltip:AddDoubleLine(G.L("ahNetTotal"), F.Money(b.netTotal), .8, .85, .9, 1, 1, 1) end
+            end
+            if b.vendorTotal then GameTooltip:AddDoubleLine(G.L("vendorTotal"), F.Money(b.vendorTotal), .8, .85, .9, 1, 1, 1) end
+            local via = b.via == "vendor" and G.L("vendor") or b.via == "AH" and "AH" or G.L("unknown")
+            GameTooltip:AddDoubleLine(G.L("chosenTotal", via, b.quantity), F.Money(b.total), .88, .71, .4, 1, 1, 1)
+            GameTooltip:AddLine(G.L("totalNotHourly"), .65, .7, .8, true)
+            if not row.data.sourceNpcID then GameTooltip:AddLine(G.L("excludedUnknown"), 1, .65, .3, true)
+            elseif row.data.sourceNpcID ~= session.selectedNpcID then GameTooltip:AddLine(G.L("otherMobValue"), .65, .7, .8, true) end
+        end
         GameTooltip:AddLine(G.L("linkHint"), .6, .7, .8, true)
         GameTooltip:Show()
     end)

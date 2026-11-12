@@ -24,13 +24,13 @@ Blizzards exporterade Forever-dokumentation har kontrollerats i [reckhou/WoWBlzC
 | Professionsloot | Kända gather-/skinning-/pickpocket-/disenchant-/lockpicking-spells markerar fönster. Itemöppnade fönster och återöppnade färdiglootade kroppar ger inte säker vanlig mobloot. Äldre kroppar utan säkert registrerat kill får inte tillskrivas huvudmobben. |
 | Mynt | `CHAT_MSG_MONEY` med klientens själv-/splitformat, tolkning av lokaliserade valörer. Säker mobkälla kräver solo och entydig coin-slot. Gruppsplit har osäker källa. `PLAYER_MONEY` används inte. |
 | Itemdata | `C_Item.GetItemInfo` med legacy-fallback, laddningsbegäran och itemdata-events. Vendorpris/ikon kan fyllas när de blir tillgängliga. Inga fejkade länkar eller ikoner. |
-| AH | Auctionator v1 `GetAuctionPriceByItemLink("GrindMeter", link)` och `GetAuctionAgeByItemLink`. Den installerade version 345:s publika API och LegacyAH-databasval per realm/faction är lästa. Ingen privat databasfunktion används av adaptern. |
+| AH | Auctionator v1 `GetAuctionPriceByItemLink("GrindMeter", link)`, `GetAuctionAgeByItemLink` och `RegisterForDBUpdate("GrindMeter", callback)`. Installerad version 345:s publika API och ModernAH:s regionala ruleset-marknad är lästa. Adaptern använder enbart det publika API:ts aktiva databas. |
 
 ## Tid, gränser och minne
 
 Monoton `GetTime()` används för mättid, `time()` för datum. Eventhandlaren flyttar först klockan till eventets mottagningstid. Vid timeout stängs insamlingen innan ett event på stopptiden behandlas: intervallet är `[start, stopp)`. En tidigare påbörjad strid räknas om säker credit kommer under passet. Upphämtning efter stopp räknas inte.
 
-Paus stänger både klocka och rewardinsamling och rensar tillfälliga källkontexter. En kropp från före pausen kan därför få osäker källa efter återupptagning. Offline-tid inkluderas inte efter normal logout/reload. Fördröjd itemmetadata ändrar inga mottagna mängder eller historiska AH-citat.
+Paus stänger både klocka och rewardinsamling och rensar tillfälliga källkontexter. En kropp från före pausen kan därför få osäker källa efter återupptagning. Offline-tid inkluderas inte efter normal logout/reload. Fördröjd itemmetadata och Auctionators databasnotifiering får uppdatera aktiva/pausade pass utan att ändra tid eller mottagna mängder. Avslutade pass omprissätts endast i en uttryckligen vald alternativ vy.
 
 Körande sessionsdata håller högst 4 096 kill-GUID:n, 100 färska XP-kandidater, 1 024 chattdedupliceringsnycklar och sex lootkontexter. En session avslutas vid 8 192 itemreceipts. Gamla borttagna killkällor kan ge okänd lootkälla. Rå combatlog sparas inte. UI/timer uppdateras högst fyra gånger per sekund, med händelsestyrda itemuppslag och ingen bag-/AH-skanning per frame.
 

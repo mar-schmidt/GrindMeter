@@ -83,8 +83,10 @@ function C:Dispatch(event, ...)
     if event == "PLAYER_LOGOUT" then G.Session:Checkpoint(now); return end
     if event == "GROUP_ROSTER_UPDATE" or event == "UNIT_PET" then G.Trackers:UpdateRoster(); return end
     if event == "GET_ITEM_INFO_RECEIVED" or event == "ITEM_DATA_LOAD_RESULT" then
-        local id = ...; if G.Prices.requested then G.Prices.requested[id] = nil end
-        G.UI.dirty = true; return
+        local id, success = ...; if G.Prices.requested then G.Prices.requested[id] = nil end
+        if success ~= false then G.Prices:RefreshActiveQuotes(id) end
+        if G.UI then G.UI.dirty = true end
+        return
     end
     if event == "PLAYER_ENTERING_WORLD" then G.Trackers:UpdateRoster(); return end
     if event == "PLAYER_TARGET_CHANGED" then self:ObserveUnit("target"); return end
