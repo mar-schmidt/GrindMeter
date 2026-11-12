@@ -82,7 +82,7 @@ end
 function W.Metric(parent, x, y, width)
     local card = W.Place(W.Panel(parent, width, 88), x, y)
     card.title = W.Place(W.Text(card, "", 11, W.colors.muted, width - 24), 12, 12)
-    card.number = W.Place(W.Text(card, "—", 28, W.colors.text, width - 24), 12, 29)
+    card.number = W.Place(W.Text(card, "-", 28, W.colors.text, width - 24), 12, 29)
     card.detail = W.Place(W.Text(card, "", 10, W.colors.muted, width - 24), 12, 65)
     return card
 end

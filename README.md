@@ -2,11 +2,11 @@
 
 Ett fristående addon för **WoW Forever** som mäter kills/h, faktiskt erhållen mob-XP/h och värdet av loot du plockar upp. Svenska är förvalt språk; engelska väljs under Inställningar.
 
-**0.1.2 rättar prisuppdateringen och förklarar varje lootrads värde.** AH-priser uppdateras när Auctionator skannar eller saknad itemdata laddas. Tooltipen visar styckpris, antal, avgift och valt totalvärde. Korrigeringen från 0.1.1 för Blizzards blockeringsruta ingår också. Automatiska tester är genomförda; ändringarna behöver fortfarande bekräftas inne i WoW. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
+**0.1.3 ersätter symboler som kunde visas som fyrkanter i UI:t.** Sorteringen visar nu **Kvalitet** eller **Quality** i stället för en stjärna. Inställningar, knappar och statusrader använder vanliga texttecken; svenska å, ä och ö behålls. Pris- och uppstartskorrigeringarna från tidigare versioner ingår. Automatiska tester är genomförda; visningen behöver fortfarande bekräftas inne i WoW. Installerad klient: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md).
 
 ## Installera
 
-1. Ladda ned **GrindMeter-0.1.2.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
+1. Ladda ned **GrindMeter-0.1.3.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
 2. Packa upp. Flytta hela mappen **GrindMeter** till spelets `Interface/AddOns`.
 3. Starta om WoW om mappen är ny. Kontrollera att GrindMeter är aktiverat i addonlistan. Efter uppdatering av ett redan upptäckt addon räcker normalt `/reload`.
 
@@ -24,7 +24,7 @@ C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\GrindMeter\G
 
 Vid uppdatering: ersätt den gamla addonmappen, behåll spelets SavedVariables och kör `/reload`. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
 
-TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.2`-mapp gör att spelet inte hittar addonet.
+TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.3`-mapp gör att spelet inte hittar addonet.
 
 ## Din första mätning
 

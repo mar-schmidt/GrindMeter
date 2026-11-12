@@ -1,4 +1,4 @@
-# Testresultat — GrindMeter 0.1.2
+# Testresultat — GrindMeter 0.1.3
 
 Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, inte spelklient.
 
@@ -47,6 +47,12 @@ Auctionator 345:s installerade API, tooltiplogik och ModernAH-marknadsval har l�
 Detta verifierar sparade värden och styckprisenhet, inte aktuella livepriser. Bristly Whisker ger lägre AH-netto än vendor vid 5 % avgift, så vendor är korrekt rekommendation. Long Soft Tail × 4 ger 3 480 koppar före avgift och 3 306 efter avgift. Inga kontouppgifter eller prisdatabaser ingår i paketet.
 
 Tio nya regressionstester täcker prisuppdatering, historik, paus, API-avbrott vid avslut, bindning, prisålder, beräkning och tooltip. Sen itemdata och databasnotifiering provas med syntetiska API-svar; faktisk notifiering i spelklienten återstår.
+
+## Textvisning i 0.1.3
+
+Rapporterade fyrkanter efter Sortera matchar den tidigare stjärnsymbolen i UI-koden. Sorteringsetiketten är nu utskriven som Kvalitet / Quality. Övriga dekorativa Unicode-tecken har ersatts med vanliga texttecken, utan att ändra svenska bokstäver eller mottagna itemlänkar.
+
+Sorteringens fyra lägen, inställningarnas på/av-markeringar och stängknappar har kontrollerats i UI-harnessen på svenska och engelska. En källkontroll bekräftar att addonets egna UI-strängar bara använder ASCII och svenska bokstäver. Det är inte ett test av spelklientens faktiska fontrendering.
 
 ## Visuell granskning
 

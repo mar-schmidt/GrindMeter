@@ -19,7 +19,7 @@ function U:ChooseTarget()
 end
 function U:Start()
     local context = G.Client:Context()
-    if context.gameFlavor ~= "forever" then self.setupError = "WoW Forever (Interface 16000–16999)"; self:Refresh(); return end
+    if context.gameFlavor ~= "forever" then self.setupError = "WoW Forever (Interface 16000-16999)"; self:Refresh(); return end
     local ok, reason = G.Session:Start(self.selection, context, GetTime(), time())
     if not ok then self.setupError = G.L(reason); self:Refresh(); return end
     G.Trackers:XPDelta(UnitXP("player"), UnitXPMax("player"), UnitLevel("player"), GetTime())
@@ -37,7 +37,7 @@ function U:Create()
     local icon = frame:CreateTexture(nil, "ARTWORK"); icon:SetTexture(G.icon); icon:SetSize(30, 30); W.Place(icon, 22, 23)
     W.Place(W.Text(frame, "GrindMeter", 21, W.colors.gold), 64, 18)
     self.subtitle = label(frame, "subtitle", 65, 43, 11, W.colors.muted)
-    self.close = W.Place(W.Button(frame, "×", 30, 30, function() frame:Hide() end), 809, 20)
+    self.close = W.Place(W.Button(frame, "x", 30, 30, function() frame:Hide() end), 809, 20)
     self.nav = {}
     for i, key in ipairs({"measure", "history", "settings"}) do
         self.nav[key] = button(frame, key, 20 + (i - 1) * 171, 76, 161, function()
@@ -190,7 +190,7 @@ function U:CreateHUD()
     local handle = CreateFrame("Frame", nil, h); handle:SetSize(270, 31); handle:SetPoint("TOPLEFT")
     W.Draggable(h, handle, "hudPosition")
     W.Place(W.Text(h, "GrindMeter", 12, W.colors.gold), 12, 12)
-    self.hudClose = W.Place(W.Button(h, "×", 24, 24, function() h:Hide() end), 277, 5)
+    self.hudClose = W.Place(W.Button(h, "x", 24, 24, function() h:Hide() end), 277, 5)
     W.Tooltip(self.hudClose, G.L("minimize"))
     self.hudMob = W.Place(W.Text(h, "", 15, W.colors.text, 282), 12, 40)
     self.hudTime = W.Place(W.Text(h, "", 11, W.colors.muted, 282), 12, 65)
@@ -213,7 +213,7 @@ function U:Refresh()
     for _, key in ipairs({"measure", "history", "settings"}) do self.nav[key]:SetText(G.L(key)); self.nav[key]:SetSelected(self.tab == key) end
     self.subtitle:SetText(G.L("subtitle"))
     self.setup:Hide(); self.result:Hide(); self.history:Hide(); self.settings:Hide()
-    self.footer:SetText(G.L("beforeCosts") .. "\n" .. G.L("diagnosticsWarning") .. "  ·  " .. G.L("extrapolated"))
+    self.footer:SetText(G.L("beforeCosts") .. "\n" .. G.L("diagnosticsWarning") .. "  -  " .. G.L("extrapolated"))
     if self.tab == "history" then self.history:Show(); self:UpdateHistory()
     elseif self.tab == "settings" then self.settings:Show(); self:UpdateSettings()
     elseif self:ActiveView() and (not self.newMode or G.Session.s) then self.result:Show(); self:UpdateResult(); self:UpdateLoot()
@@ -224,7 +224,7 @@ function U:UpdateSetup()
     local selection = self.selection
     self.targetHeading:SetText(G.L("step1"))
     self.targetName:SetText(selection and selection.name or G.L("choose"))
-    self.targetMeta:SetText(selection and "NPC " .. selection.npcID .. "  ·  " .. (selection.zoneName or "") or "")
+    self.targetMeta:SetText(selection and "NPC " .. selection.npcID .. "  -  " .. (selection.zoneName or "") or "")
     self.targetHint:SetText(self.setupError or G.L(selection and "selectedHint" or "selectHint"))
     self.targetButton:SetText(G.L("select")); self.startButton:SetText(G.L("start")); W.Enable(self.startButton, selection ~= nil)
     self.durationHeading:SetText(G.L("step2")); self.timeHint:SetText(G.L("timeHint")); self.startHeading:SetText(G.L("step3"))
@@ -243,30 +243,30 @@ function U:UpdateResult()
     local total = G.Calculator.Metrics(s, nil, method, self.revalued)
     self.mobName:SetText(s.selectedName)
     self.status:SetText(G.L(s.state == "running" and "running" or s.state == "paused" and "paused" or "finished"))
-    self.meta:SetText("NPC " .. s.selectedNpcID .. "  ·  " .. (s.zoneName or "") .. "  ·  " .. F.Date(s.startedAt)
-        .. "  ·  Lv " .. s.levelStart .. (s.levelEnd and s.levelEnd ~= s.levelStart and " → " .. s.levelEnd or "")
-        .. "  ·  " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. (s.groupChanged and " · " .. G.L("groupChanged") or ""))
+    self.meta:SetText("NPC " .. s.selectedNpcID .. "  -  " .. (s.zoneName or "") .. "  -  " .. F.Date(s.startedAt)
+        .. "  -  Lv " .. s.levelStart .. (s.levelEnd and s.levelEnd ~= s.levelStart and " > " .. s.levelEnd or "")
+        .. "  -  " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. (s.groupChanged and " - " .. G.L("groupChanged") or ""))
     local timing = G.L("measured") .. " " .. F.Time(s.measuredSeconds)
-    if s.duration > 0 then timing = timing .. "  ·  " .. G.L("remaining") .. " " .. F.Time(math.max(0, s.duration - s.measuredSeconds)) end
-    if s.pausedSeconds > 0 then timing = timing .. "  ·  " .. G.L("pausedTime") .. " " .. F.Time(s.pausedSeconds) end
+    if s.duration > 0 then timing = timing .. "  -  " .. G.L("remaining") .. " " .. F.Time(math.max(0, s.duration - s.measuredSeconds)) end
+    if s.pausedSeconds > 0 then timing = timing .. "  -  " .. G.L("pausedTime") .. " " .. F.Time(s.pausedSeconds) end
     self.timing:SetText(timing); self.progressFill:SetWidth(math.max(1, s.duration > 0 and 816 * math.min(1, s.measuredSeconds / s.duration) or 816))
     local c = self.cards
-    c[1].title:SetText(G.L("selectedMob") .. " · " .. G.L("killsHour")); c[1].number:SetText(F.Number(m.killsHour))
-    c[1].detail:SetText(m.kills .. " " .. G.L("kills") .. " · " .. F.Number(m.secondsKill) .. " s/kill")
-    c[2].title:SetText(G.L("xpHour") .. (m.xpPartial and " · " .. G.L("partial") or "")); c[2].number:SetText(F.Number(m.xpHour))
-    c[2].detail:SetText((s.xpAvailable and m.xp or G.L("unknown")) .. " " .. G.L("totalXP") .. " · " .. G.L("restedStart") .. " " .. tostring(s.restedInfo or 0))
-    c[3].title:SetText(G.L("valueHour") .. (m.valuation.partial and " · " .. G.L("partial") or "")); c[3].number:SetText(F.Gold(m.valuation.rate))
-    c[3].detail:SetText(G.L(method) .. (self.revalued and " · " .. G.L("revaluedShort") or ""))
+    c[1].title:SetText(G.L("selectedMob") .. " - " .. G.L("killsHour")); c[1].number:SetText(F.Number(m.killsHour))
+    c[1].detail:SetText(m.kills .. " " .. G.L("kills") .. " - " .. F.Number(m.secondsKill) .. " s/kill")
+    c[2].title:SetText(G.L("xpHour") .. (m.xpPartial and " - " .. G.L("partial") or "")); c[2].number:SetText(F.Number(m.xpHour))
+    c[2].detail:SetText((s.xpAvailable and m.xp or G.L("unknown")) .. " " .. G.L("totalXP") .. " - " .. G.L("restedStart") .. " " .. tostring(s.restedInfo or 0))
+    c[3].title:SetText(G.L("valueHour") .. (m.valuation.partial and " - " .. G.L("partial") or "")); c[3].number:SetText(F.Gold(m.valuation.rate))
+    c[3].detail:SetText(G.L(method) .. (self.revalued and " - " .. G.L("revaluedShort") or ""))
     local vendor = G.Calculator.Value(s, s.selectedNpcID, "vendor", self.revalued)
     local best = G.Calculator.Value(s, s.selectedNpcID, "best", self.revalued)
-    self.totals:SetText(G.L("wholeSession") .. ((total.xpPartial or total.valuation.partial) and " (" .. G.L("partial") .. ")" or "") .. ":  " .. total.kills .. " kills  ·  " .. F.Number(total.killsHour) .. " kills/h  ·  "
-        .. F.Number(total.xpHour) .. " XP/h  ·  " .. F.Gold(total.valuation.rate) .. " G/h\n"
+    self.totals:SetText(G.L("wholeSession") .. ((total.xpPartial or total.valuation.partial) and " (" .. G.L("partial") .. ")" or "") .. ":  " .. total.kills .. " kills  -  " .. F.Number(total.killsHour) .. " kills/h  -  "
+        .. F.Number(total.xpHour) .. " XP/h  -  " .. F.Gold(total.valuation.rate) .. " G/h\n"
         .. G.L("selectedMob") .. ": " .. G.L("coins") .. " " .. F.Money(m.valuation.coins)
-        .. " · " .. G.L("vendor") .. " " .. F.Gold(vendor.rate) .. " G/h · " .. G.L("best") .. " " .. F.Gold(best.rate) .. " G/h"
-        .. ((vendor.partial or best.partial) and " · " .. G.L("partial") or "")
+        .. " - " .. G.L("vendor") .. " " .. F.Gold(vendor.rate) .. " G/h - " .. G.L("best") .. " " .. F.Gold(best.rate) .. " G/h"
+        .. ((vendor.partial or best.partial) and " - " .. G.L("partial") or "")
         .. (s.unattributedMoney > 0 and "\n" .. G.L("unknownCoins") .. ": " .. F.Money(s.unattributedMoney) or ""))
     local note = G.L("diagnosticsLine", s.unattributedXP, s.unattributedLoot, m.valuation.unknown, m.valuation.stale)
-        .. (method ~= "vendor" and " · " .. G.L("ahMissingCount", m.valuation.ahMissing) or "")
+        .. (method ~= "vendor" and " - " .. G.L("ahMissingCount", m.valuation.ahMissing) or "")
     if not s.killAvailable then note = G.L("combatRestricted")
     elseif not s.xpAvailable then note = G.L("xpUnavailable")
     elseif s.recovered and s.state == "paused" then note = G.L("restored")
@@ -331,8 +331,8 @@ function U:LootRow(index)
         GameTooltip:AddLine(" "); GameTooltip:AddLine(G.L("vendorUnit") .. ": " .. F.Money(price.vendor), 1, 1, 1)
         if price.ah then
             local ah = price.ah
-            GameTooltip:AddLine(G.L("ahUnit") .. ": " .. F.Money(ah.unitPriceCopper) .. " · minimumBuyout", 1, 1, 1)
-            GameTooltip:AddLine(ah.sourceName .. " " .. (ah.sourceVersion or "") .. " · " .. ah.scope.region .. " / " .. ah.scope.realm .. " / " .. ah.scope.faction, .7, .75, .8, true)
+            GameTooltip:AddLine(G.L("ahUnit") .. ": " .. F.Money(ah.unitPriceCopper) .. " - minimumBuyout", 1, 1, 1)
+            GameTooltip:AddLine(ah.sourceName .. " " .. (ah.sourceVersion or "") .. " - " .. ah.scope.region .. " / " .. ah.scope.realm .. " / " .. ah.scope.faction, .7, .75, .8, true)
             GameTooltip:AddLine(ah.ageDays and G.L("dayAge", math.max(0, ah.ageDays - 1) * 24, (ah.ageDays + 1) * 24) or F.Date(ah.observedAt), .9, .75, .4, true)
             if ah.stale then GameTooltip:AddLine(G.L("stale"), 1, .6, .2) end
             if ah.ageUncertain then GameTooltip:AddLine(G.L("ageUncertain"), .9, .75, .4, true) end
@@ -345,7 +345,7 @@ function U:LootRow(index)
             GameTooltip:AddLine(" "); GameTooltip:AddLine(G.L("priceBreakdown"), .88, .71, .4)
             if b.grossTotal then
                 GameTooltip:AddDoubleLine(G.L("ahGrossTotal", b.quantity), F.Money(b.grossTotal), .8, .85, .9, 1, 1, 1)
-                GameTooltip:AddDoubleLine(G.L("ahFeeTotal", (session.fee or .05) * 100), "− " .. F.Money(b.feeTotal), .8, .85, .9, 1, 1, 1)
+                GameTooltip:AddDoubleLine(G.L("ahFeeTotal", (session.fee or .05) * 100), "- " .. F.Money(b.feeTotal), .8, .85, .9, 1, 1, 1)
                 if b.netTotal then GameTooltip:AddDoubleLine(G.L("ahNetTotal"), F.Money(b.netTotal), .8, .85, .9, 1, 1, 1) end
             end
             if b.vendorTotal then GameTooltip:AddDoubleLine(G.L("vendorTotal"), F.Money(b.vendorTotal), .8, .85, .9, 1, 1, 1) end
@@ -364,7 +364,7 @@ end
 function U:UpdateLoot()
     local s = self:ActiveView(); if not s then return end
     for key, b in pairs(self.lootTabs) do b:SetText(G.L(key)); b:SetSelected(key == self.lootTab) end
-    self.sortButton:SetText(G.L("sort") .. ": " .. (self.sort == "quality" and "★" or G.L(self.sort)))
+    self.sortButton:SetText(G.L("sort") .. ": " .. G.L(self.sort))
     local rows, coverage = self:Rows(s)
     local prices = self.revalued or s.priceSnapshot
     for _, row in ipairs(rows) do
@@ -398,7 +398,7 @@ function U:UpdateLoot()
         for _, row in ipairs(rows) do if row.source == "Everloot" then hasCommunity = true; break end end
         local forecast = G.Calculator.Forecast(rows, G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method).killsHour,
             function(item) return G.Calculator.ItemValue(item.price, G.Storage.settings.method, s.fee) end, s.fee)
-        local forecastText = forecast.value and G.L("forecast") .. ": " .. F.Gold(forecast.value) .. (forecast.partial and " · " .. G.L("partialForecast") or "") or G.L("forecastMissing")
+        local forecastText = forecast.value and G.L("forecast") .. ": " .. F.Gold(forecast.value) .. (forecast.partial and " - " .. G.L("partialForecast") or "") or G.L("forecastMissing")
         self.lootEmpty:SetText(G.L("catalogPartial") .. "\n" .. (hasCommunity and G.L("catalogCredit", G.Catalog.community.dataAsOf:sub(1, 10)) or G.L("localBias")) .. "\n" .. forecastText)
     end
     if self.lootTab == "possible" and #rows == 0 then self.lootEmpty:SetText(G.L("missingCatalog") .. "\n\n" .. G.L("forecastMissing")) end
@@ -406,22 +406,22 @@ function U:UpdateLoot()
         local row = self:LootRow(i); W.Place(row, 0, offset + (i - 1) * 57); row:Show(); row.data = data; row.price = data.price
         row.link:SetShown(data.itemID ~= nil); row.link:SetText(G.L("link"))
         if data.npcID then
-            row.icon:SetTexture(nil); row.title:SetText(data.name .. " · NPC " .. data.npcID)
+            row.icon:SetTexture(nil); row.title:SetText(data.name .. " - NPC " .. data.npcID)
             row.value:SetText(data.metrics.kills .. " kills")
-            row.sub:SetText(F.Number(data.metrics.killsHour) .. " kills/h · " .. F.Number(data.metrics.xpHour) .. " XP/h · " .. F.Gold(data.metrics.valuation.rate) .. " G/h")
+            row.sub:SetText(F.Number(data.metrics.killsHour) .. " kills/h - " .. F.Number(data.metrics.xpHour) .. " XP/h - " .. F.Gold(data.metrics.valuation.rate) .. " G/h")
         else
             local price = data.price; local unit, recommendation = G.Calculator.ItemValue(price, G.Storage.settings.method, s.fee)
             row.icon:SetTexture(price.icon)
             local quality = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[price.quality or 1]
             row.title:SetText(data.itemLink or price.link or data.displayName)
             if quality then row.title:SetTextColor(quality.r, quality.g, quality.b) else row.title:SetTextColor(unpack(W.colors.text)) end
-            row.value:SetText(self.lootTab == "possible" and (data.probability and string.format("%.2f%%", data.probability * 100) or "—") or "×" .. data.quantity .. " · " .. F.Money(unit and unit * data.quantity))
+            row.value:SetText(self.lootTab == "possible" and (data.probability and string.format("%.2f%%", data.probability * 100) or "-") or "x" .. data.quantity .. " - " .. F.Money(unit and unit * data.quantity))
             local source = data.sourceNpcID and (s.countersByNpcID[data.sourceNpcID] or {}).name or G.L("unknownSource")
-            local detail = G.L("vendorUnit") .. " " .. F.Money(price.vendor) .. "  ·  " .. G.L("ahUnit") .. " " .. F.Money(price.ah and price.ah.unitPriceCopper)
+            local detail = G.L("vendorUnit") .. " " .. F.Money(price.vendor) .. "  -  " .. G.L("ahUnit") .. " " .. F.Money(price.ah and price.ah.unitPriceCopper)
             if self.lootTab == "possible" then
                 detail = data.bodies and G.L("observedDrop", data.hits, data.bodies, data.units / math.max(1, data.bodies))
                     or data.windowCount and G.L("communitySample", data.probability * 100, data.windowCount, data.reporters) or G.L("forecastMissing")
-            else detail = detail .. "  ·  " .. source .. "  ·  " .. recommendation end
+            else detail = detail .. "  -  " .. source .. "  -  " .. recommendation end
             row.sub:SetText(detail)
         end
     end
@@ -429,7 +429,7 @@ function U:UpdateLoot()
 end
 function U:UpdateHistory()
     self.historyHeading:SetText(G.L("history")); self.historyHint:SetText(G.L("historyHint")); self.filterLabel:SetText(G.L("filter"))
-    self.historyDelete:SetText(G.L("delete")); self.historyDetail:SetText(G.L("viewResult") .. " →")
+    self.historyDelete:SetText(G.L("delete")); self.historyDetail:SetText(G.L("viewResult") .. " >")
     W.Enable(self.historyDelete, self.historySelected ~= nil); W.Enable(self.historyDetail, self.historySelected ~= nil)
     local filter = self.filter:GetText():lower(); local rows = {}
     for _, s in ipairs(G.Storage.character.history) do
@@ -451,9 +451,9 @@ function U:UpdateHistory()
         local m = G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method)
         local priceDate
         for _, p in pairs(s.priceSnapshot) do if p.ah and (not priceDate or p.ah.observedAt < priceDate) then priceDate = p.ah.observedAt end end
-        row.title:SetText(s.selectedName .. "  ·  " .. F.Time(s.measuredSeconds) .. "  ·  " .. F.Number(m.killsHour) .. " kills/h  ·  " .. F.Number(m.xpHour) .. " XP/h  ·  " .. F.Gold(m.valuation.rate) .. " G/h")
-        row.detail:SetText(F.Date(s.startedAt) .. " · Lv " .. s.levelStart .. " · " .. G.L("restedStart") .. " " .. (s.restedInfo or 0)
-            .. " · " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. " · AH " .. (priceDate and F.Date(priceDate) or "—") .. ((m.valuation.partial or m.xpPartial) and " · " .. G.L("partial") or ""))
+        row.title:SetText(s.selectedName .. "  -  " .. F.Time(s.measuredSeconds) .. "  -  " .. F.Number(m.killsHour) .. " kills/h  -  " .. F.Number(m.xpHour) .. " XP/h  -  " .. F.Gold(m.valuation.rate) .. " G/h")
+        row.detail:SetText(F.Date(s.startedAt) .. " - Lv " .. s.levelStart .. " - " .. G.L("restedStart") .. " " .. (s.restedInfo or 0)
+            .. " - " .. G.L(s.groupInfo == "solo" and "solo" or "group") .. " - AH " .. (priceDate and F.Date(priceDate) or "-") .. ((m.valuation.partial or m.xpPartial) and " - " .. G.L("partial") or ""))
     end
     self.historyScroll.content:SetHeight(math.max(305, #rows * 76))
 end
@@ -461,7 +461,7 @@ function U:UpdateSettings()
     self.settingsHeading:SetText(G.L("settings")); self.languageLabel:SetText(G.L("language"))
     self.sv:SetSelected(G.Storage.settings.language == "sv"); self.en:SetSelected(G.Storage.settings.language == "en")
     for _, row in ipairs({{self.minimapToggle, "minimap", "showMinimap"}, {self.hudToggle, "hud", "showHUD"}}) do
-        row[1]:SetText((G.Storage.settings[row[3]] and "✓  " or "○  ") .. G.L(row[2]))
+        row[1]:SetText((G.Storage.settings[row[3]] and "[x]  " or "[ ]  ") .. G.L(row[2]))
     end
     self.methodButton:SetText(G.L("value") .. ": " .. G.L(G.Storage.settings.method))
     self.feeLabel:SetText(G.L("fee") .. " (%)"); self.feeEdit:SetText(tostring(math.floor(G.Storage.settings.fee * 100 + .5)))
@@ -473,10 +473,10 @@ function U:UpdateHUD()
     if not s then return end
     local m = G.Calculator.Metrics(s, s.selectedNpcID, G.Storage.settings.method)
     self.hudMob:SetText(s.selectedName)
-    self.hudTime:SetText(G.L(s.state == "running" and "running" or s.state == "paused" and "paused" or "finished") .. " · " .. F.Time(s.measuredSeconds)
+    self.hudTime:SetText(G.L(s.state == "running" and "running" or s.state == "paused" and "paused" or "finished") .. " - " .. F.Time(s.measuredSeconds)
         .. (s.duration > 0 and " / " .. F.Time(s.duration) or ""))
-    self.hudNumbers:SetText(F.Number(m.killsHour) .. " kills/h   ·   " .. F.Number(m.xpHour) .. " XP/h\n" .. F.Gold(m.valuation.rate) .. " G/h · " .. G.L("value"))
-    self.hudMethod:SetText(G.L(G.Storage.settings.method) .. ((m.valuation.partial or m.xpPartial) and " · " .. G.L("partial") or ""))
+    self.hudNumbers:SetText(F.Number(m.killsHour) .. " kills/h   -   " .. F.Number(m.xpHour) .. " XP/h\n" .. F.Gold(m.valuation.rate) .. " G/h - " .. G.L("value"))
+    self.hudMethod:SetText(G.L(G.Storage.settings.method) .. ((m.valuation.partial or m.xpPartial) and " - " .. G.L("partial") or ""))
     self.hudPause:SetText(G.L(s.state == "paused" and "resume" or s.state == "running" and "pause" or "measure"))
     self.hudStop:SetText(G.L(s.state == "finished" and "history" or "stop"))
 end
@@ -484,7 +484,7 @@ function U:CopyBox(text)
     if not self.copy then
         self.copy = W.Panel(UIParent, 690, 380, W.colors.bg); self.copy:SetPoint("CENTER"); self.copy:SetFrameStrata("FULLSCREEN_DIALOG")
         local title = label(self.copy, "copyHint", 20, 20, 12, W.colors.muted, 620)
-        W.Place(W.Button(self.copy, "×", 26, 26, function() self.copy:Hide() end), 652, 10)
+        W.Place(W.Button(self.copy, "x", 26, 26, function() self.copy:Hide() end), 652, 10)
         local scroll = W.Place(W.Scroll(self.copy, 620, 285), 22, 64)
         self.copyEdit = CreateFrame("EditBox", nil, scroll.content); self.copyEdit:SetMultiLine(true); self.copyEdit:SetAutoFocus(false)
         self.copyEdit:SetFontObject(ChatFontNormal); self.copyEdit:SetSize(610, 285); self.copyEdit:SetPoint("TOPLEFT")

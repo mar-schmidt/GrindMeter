@@ -1,5 +1,5 @@
 local _, G = ...
-G.version = "0.1.2"
+G.version = "0.1.3"
 G.schema = 1
 G.icon = "Interface\\Icons\\INV_Misc_PocketWatch_01"
 G.modules = {}

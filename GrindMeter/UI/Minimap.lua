@@ -30,7 +30,7 @@ function M:Create()
     b:SetScript("OnEnter", function()
         GameTooltip:SetOwner(b, "ANCHOR_LEFT"); GameTooltip:SetText("GrindMeter", .88, .71, .4)
         local s = G.Session.s
-        if s then GameTooltip:AddLine(s.selectedName .. " · " .. G.L(s.state == "running" and "running" or "paused"), 1, 1, 1) end
+        if s then GameTooltip:AddLine(s.selectedName .. " - " .. G.L(s.state == "running" and "running" or "paused"), 1, 1, 1) end
         GameTooltip:AddLine(G.L("miniHint"), .8, .85, .9, true); GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)

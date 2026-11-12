@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 — 2026-11-12
+
+- Ersätter stjärnan efter Sortera med den utskrivna etiketten Kvalitet / Quality.
+- Ersätter bockar och cirklar i inställningarna med vanliga textmarkeringar, `[x]` och `[ ]`.
+- Tar bort dekorativa Unicode-symboler i knappar, statusrader, tomma värden, antal, hjälprader och tooltipar som kunde visas som fyrkanter. Svenska bokstäver och spelets itemlänkar behålls.
+- Befintliga 64 Lua-tester och 3 Python-tester passerar. Kontroll av sorteringsvalen och inställningarnas båda lägen är genomförd på svenska och engelska i UI-harnessen; visningen i spelklientens font återstår.
+
 ## 0.1.2 — 2026-11-12
 
 - Rättar saknade AH-priser som tidigare kunde fastna under hela passet. Auctionators publika databasnotifiering och lyckade itemdata-events uppdaterar nu aktiva/pausade pass även när fönstret är stängt.
