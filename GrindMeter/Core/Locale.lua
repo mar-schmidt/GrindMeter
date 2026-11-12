@@ -69,7 +69,7 @@ local strings = {
     scope = {"Marknad", "Market"},
     diagnose = {"Kopiera diagnostik", "Copy diagnostics"},
     diagnosticHint = {"Visar klientversion, tillgängliga datakällor och eventräknare. Inga kontouppgifter.", "Shows client version, available data sources and event counts. No account credentials."},
-    combatRestricted = {"Killdata är inte tillgänglig: klienten begränsar combatloggen. Resultatet blir ofullständigt.", "Kill data unavailable: the client restricts the combat log. Results will be incomplete."},
+    combatRestricted = {"Säker killcredit kan inte läsas just nu. Resultatet blir ofullständigt.", "Confirmed kill credit cannot be read right now. Results will be incomplete."},
     awaitingCredit = {"Killkällan är tillgänglig men ännu oprövad i detta pass.", "Kill source is available but has not yet produced credit this session."},
     xpUnavailable = {"XP-meddelanden kan inte tolkas för klientspråket. XP visas som okänt.", "XP messages cannot be parsed for this client language. XP is shown as unknown."},
     diagnosticsLine = {"Osäker XP: %d · loot utan källa: %d · ej värderade: %d · gamla AH-priser: %d", "Uncertain XP: %d · unsourced loot: %d · unvalued: %d · stale AH prices: %d"},
@@ -84,7 +84,7 @@ local strings = {
     localBias = {"Egen observation · urvalet kan påverkas av lootval och gruppfördelning.", "Own observation · loot choices and group distribution can bias the sample."},
     baseVariant = {"Katalogpost för grunditem. Suffixvarianter kan ha andra priser.", "Base-item catalog entry. Suffix variants may have different prices."},
     rewardMissing = {"XP eller loot kan sakna säker koppling. Berörda nyckeltal visas som delvärden.", "Some XP or loot lacks confirmed attribution. Affected metrics are shown as subtotals."},
-    diagnosticsWarning = {"Klienttest återstår · 0.1.0", "In-game validation pending · 0.1.0"},
+    diagnosticsWarning = {"Klienttest återstår · 0.1.1", "In-game validation pending · 0.1.1"},
 }
 G.Strings = strings
 function G.L(key, ...)

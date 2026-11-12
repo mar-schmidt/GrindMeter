@@ -2,11 +2,11 @@
 
 Ett fristående addon för **WoW Forever** som mäter kills/h, faktiskt erhållen mob-XP/h och värdet av loot du plockar upp. Svenska är förvalt språk; engelska väljs under Inställningar.
 
-**0.1.0 är en testrelease.** Automatiska tester och en simulerad UI-granskning är genomförda. Insamlingen har ännu inte verifierats inne i WoW. Den lokala installationens metadata är kontrollerad: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md) för återstående verifiering. Detta är inte ett påstående att samtliga P0-krav är slutgodkända.
+**0.1.1 är en testrelease med korrigerad uppstart.** Version 0.1.0 kunde utlösa Blizzards blockeringsruta genom en förbjuden combatlogregistrering. Nu används det separata `PARTY_KILL`-eventet; ingen combatlog registreras eller läses. Automatiska tester och en simulerad UI-granskning är genomförda. Den korrigerade insamlingen har ännu inte verifierats inne i WoW. Den lokala installationens metadata är kontrollerad: Forever **1.60.1.70888**, TOC **16001**. Se [klienttestlistan](docs/IN_GAME_TESTING.md) för återstående verifiering. Detta är inte ett påstående att samtliga P0-krav är slutgodkända.
 
 ## Installera
 
-1. Ladda ned **GrindMeter-0.1.0.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
+1. Ladda ned **GrindMeter-0.1.1.zip** från Releases. GitHubs automatiska “Source code”-zip är källkoden, inte installationspaketet.
 2. Packa upp. Flytta hela mappen **GrindMeter** till spelets `Interface/AddOns`.
 3. Starta om WoW om mappen är ny. Kontrollera att GrindMeter är aktiverat i addonlistan. Efter uppdatering av ett redan upptäckt addon räcker normalt `/reload`.
 
@@ -22,7 +22,9 @@ Windows, byt början till din egen WoW-mapp:
 C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns\GrindMeter\GrindMeter.toc
 ```
 
-TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.0`-mapp gör att spelet inte hittar addonet.
+Vid uppdatering: ersätt den gamla addonmappen, behåll spelets SavedVariables och kör `/reload`. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
+
+TOC-filen ska ligga direkt i `GrindMeter`. En extra yttre `GrindMeter-0.1.1`-mapp gör att spelet inte hittar addonet.
 
 ## Din första mätning
 

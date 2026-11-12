@@ -1,10 +1,10 @@
-# Testresultat — GrindMeter 0.1.0
+# Testresultat — GrindMeter 0.1.1
 
 Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, inte spelklient.
 
 ## Genomfört
 
-**46 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
+**54 Lua-tester och 3 Python-tester passerar.** Lua kördes med LuaJIT i Lua 5.1-läge. GitHub Actions kör samma Lua-testsvit med Lua 5.1 och kontrollerar syntax för alla distribuerade Lua-filer.
 
 | Område | Automatiskt verifierat |
 |---|---|
@@ -26,6 +26,10 @@ Datum: **2026-11-12**. Testtyp: syntetiska eventsekvenser och mockad WoW-UI, int
 | Prisimportverktyg | Scope, framtidsdatum, stack-/styckpris, Lua-escaping, icke-finita tal och exkludering av extra fält/hemligheter |
 
 De 32 acceptans-ID:na har syntetiska testfall, med AT-21/22 i ett gemensamt fall och kompletterande gränsfall. Detta innebär inte att alla klientberoende delar av acceptanskraven är godkända i spelet.
+
+## Uppstartsregression i 0.1.1
+
+Version 0.1.0 gav en rapporterad blockeringsruta vid uppstart i WoW. 0.1.1 tar bort förbjuden combatlogregistrering och använder det dokumenterade separata `PARTY_KILL(attackerGUID, targetGUID)`-eventet. Åtta nya regressionstester simulerar bland annat att förbjuden registrering kan utlösa Blizzard-varningen utan Lua-fel: exakt noll sådana försök tillåts. Kill-/XP-flödet testas även med frånvarande combatlog-API, hemliga identiteter, pets, andra mobnamn, paus och timeout. Den korrigerade versionen behöver fortfarande bekräftas i målklienten.
 
 ## Visuell granskning
 

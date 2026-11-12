@@ -46,7 +46,7 @@ frame:SetScript("OnEvent", function(_, event, ...)
         G.Client.errors[event] = "payload-unavailable"
         if G.Session.s then
             G.Trackers:Diagnostic("unavailablePayload")
-            if event == "COMBAT_LOG_EVENT_UNFILTERED" then G.Session.s.killAvailable = false end
+            if event == "PARTY_KILL" then G.Session.s.killAvailable = false end
             if event == "CHAT_MSG_COMBAT_XP_GAIN" then G.Session.s.xpAvailable = false end
             if event:match("^LOOT_") or event == "CHAT_MSG_LOOT" or event == "CHAT_MSG_MONEY" then G.Session.s.lootUnavailable = true end
         end

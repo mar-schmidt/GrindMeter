@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1 — 2026-11-12
+
+- Åtgärdar uppstartsmeddelandet “GrindMeter has been blocked from an action only available to the Blizzard UI”.
+- Tar bort förbjuden combatlogregistrering. Använder Forevers separata `PARTY_KILL(attackerGUID, targetGUID)`; `pcall` används aldrig som försök att tillåta en förbjuden registrering.
+- Samlar läsbara mobnamn från target, mouseover och namnplattor. GUID, NPC-ID och roster krävs fortfarande för säker credit.
+- `UNIT_DIED` används bara som diagnostik. Pets stöds genom roster; okända guardians gissas inte in. Hemliga identiteter hoppas över.
+- Åtta nya regressionstester; totalt 54 Lua-tester och 3 Python-tester. Inställningar och historik från 0.1.0 behålls.
+
+Korrigeringen är automatiskt testad men behöver fortfarande bekräftas inne i WoW.
+
 ## 0.1.0 — 2026-11-12
 
 Första testreleasen för WoW Forever, interface 16001.

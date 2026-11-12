@@ -1,5 +1,5 @@
 local _, G = ...
-local C = {events = {}, errors = {}}; G.Client = C
+local C = {events = {}, errors = {}, unitNames = {}, unitOrder = {}}; G.Client = C
 local function safe(value) return not issecretvalue or not issecretvalue(value) end
 local function api(name) return type(_G[name]) == "function" end
 function C:Context()
@@ -15,18 +15,36 @@ function C:Context()
         clientVersion = version, clientBuild = build, clientBuildDate = buildDate, interface = interface, locale = GetLocale(),
         levelStart = UnitLevel("player"), restedInfo = GetXPExhaustion and GetXPExhaustion() or 0,
         groupInfo = IsInGroup() and "group" or "solo"}
-    context.killAvailable = self.combatRegistered and api("CombatLogGetCurrentEventInfo") and not self:Restricted()
+    context.killAvailable = self.killRegistered == true
+    context.killSource = "PARTY_KILL"
     context.xpAvailable = G.Parser.xp and #G.Parser.xp > 0 or false
     context.xpZeroExpected = (IsXPUserDisabled and IsXPUserDisabled()) or (UnitXPMax("player") == 0)
     context.lootSourceAvailable = api("GetLootSourceInfo")
     return context
 end
-function C:Restricted()
-    if C_CombatLog and C_CombatLog.IsCombatLogRestricted then
-        local ok, restricted = pcall(C_CombatLog.IsCombatLogRestricted)
-        return not ok or not safe(restricted) or restricted == true
+function C:ObserveUnit(unit)
+    if not safe(unit) or type(unit) ~= "string" then return end
+    local guid = UnitGUID(unit)
+    if not safe(guid) or not G.NpcID(guid) then return end
+    local name = UnitName(unit)
+    if not safe(name) or type(name) ~= "string" or name == "" then return end
+    if not self.unitNames[guid] then self.unitOrder[#self.unitOrder + 1] = guid end
+    self.unitNames[guid] = name
+    if #self.unitOrder > 4096 then self.unitNames[table.remove(self.unitOrder, 1)] = nil end
+    return guid, name
+end
+function C:MobName(guid)
+    if self.unitNames[guid] then return self.unitNames[guid] end
+    for _, unit in ipairs({"target", "mouseover", "focus", "softenemy", "pettarget",
+        "party1target", "party2target", "party3target", "party4target"}) do
+        local observed, name = self:ObserveUnit(unit)
+        if observed == guid then return name end
     end
-    return false
+    -- A public creature GUID identifies its NPC type even after target has changed.
+    -- Reusing that type's known name never supplies kill credit by itself.
+    local s, npcID = G.Session.s, G.NpcID(guid)
+    if s and npcID == s.selectedNpcID then return s.selectedName end
+    return s and s.countersByNpcID[npcID] and s.countersByNpcID[npcID].name or nil
 end
 function C:Selection()
     local guid = UnitGUID("target")
@@ -35,6 +53,7 @@ function C:Selection()
     if not id or UnitIsPlayer("target") or not UnitCanAttack("player", "target") then return nil end
     local name = UnitName("target")
     if not safe(name) then return nil end
+    self:ObserveUnit("target")
     return {npcID = id, name = name or tostring(id), mapID = C_Map and C_Map.GetBestMapForUnit("player"),
         zoneName = GetZoneText()}
 end
@@ -68,13 +87,22 @@ function C:Dispatch(event, ...)
         G.UI.dirty = true; return
     end
     if event == "PLAYER_ENTERING_WORLD" then G.Trackers:UpdateRoster(); return end
+    if event == "PLAYER_TARGET_CHANGED" then self:ObserveUnit("target"); return end
+    if event == "UPDATE_MOUSEOVER_UNIT" then self:ObserveUnit("mouseover"); return end
+    if event == "NAME_PLATE_UNIT_ADDED" then self:ObserveUnit(...); return end
     if not G.Session.s then return end
     local T = G.Trackers
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        if self:Restricted() then G.Session.s.killAvailable = false; T:Diagnostic("combatRestricted"); return end
-        local data = {CombatLogGetCurrentEventInfo()}
-        for _, i in ipairs({2, 4, 8, 9}) do if not safe(data[i]) then G.Session.s.killAvailable = false; return end end
-        T:Combat(data[2], data[4], data[8], data[9], now)
+    if event == "PARTY_KILL" then
+        local attackerGUID, targetGUID = ...
+        if not safe(attackerGUID) or not safe(targetGUID) then
+            if G.Session:Collecting(now) then G.Session.s.killAvailable = false; T:Diagnostic("killIdentityRestricted") end
+            return
+        end
+        if type(attackerGUID) ~= "string" or type(targetGUID) ~= "string" then T:Diagnostic("invalidKillPayload"); return end
+        T:Credit(targetGUID, self:MobName(targetGUID), attackerGUID, now, "PARTY_KILL")
+    elseif event == "UNIT_DIED" then
+        -- The standalone death event has no ownership proof. It never increments kills.
+        if G.Session:Collecting(now) then T:Diagnostic("deathEvents") end
     elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
         local message = ...; if safe(message) then T:XP(message, select(11, ...), now) end
     elseif event == "PLAYER_XP_UPDATE" or event == "PLAYER_LEVEL_UP" then
@@ -113,11 +141,16 @@ function C:Register(frame)
     local names = {"PLAYER_LOGOUT", "PLAYER_ENTERING_WORLD", "PLAYER_XP_UPDATE", "PLAYER_LEVEL_UP", "GROUP_ROSTER_UPDATE", "UNIT_PET",
         "CHAT_MSG_COMBAT_XP_GAIN", "CHAT_MSG_LOOT", "CHAT_MSG_MONEY", "LOOT_READY", "LOOT_OPENED",
         "LOOT_SLOT_CLEARED", "LOOT_CLOSED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT", "UNIT_SPELLCAST_SUCCEEDED",
-        "COMBAT_LOG_EVENT_UNFILTERED"}
+        "PARTY_KILL", "UNIT_DIED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED"}
+    -- Forever forbids combat-log event registration itself. pcall cannot stop its
+    -- ADDON_ACTION_FORBIDDEN popup, even if RegisterEvent returns normally.
+    -- Use only the standalone, documented PARTY_KILL/UNIT_DIED events above.
+    self.killRegistered = false
     for _, event in ipairs(names) do
-        local ok = pcall(frame.RegisterEvent, frame, event)
-        if event == "COMBAT_LOG_EVENT_UNFILTERED" then self.combatRegistered = ok end
-        if not ok then self.errors[event] = "registration-unavailable" end
+        local ok, registered = pcall(frame.RegisterEvent, frame, event)
+        local available = ok and registered ~= false
+        if event == "PARTY_KILL" then self.killRegistered = available end
+        if not available then self.errors[event] = "registration-unavailable" end
     end
 end
 function C:Diagnostics()
@@ -125,7 +158,8 @@ function C:Diagnostics()
     local lines = {"GrindMeter " .. G.version, "Client: " .. context.clientVersion .. "." .. context.clientBuild,
         "Interface: " .. context.interface .. " | locale: " .. context.locale,
         "Scope: " .. context.gameFlavor .. " / " .. context.region .. " / " .. context.realm .. " / " .. context.faction,
-        "Combat API: " .. tostring(api("CombatLogGetCurrentEventInfo")), "Restricted: " .. tostring(self:Restricted()),
+        "Kill source: standalone PARTY_KILL | registered: " .. tostring(self.killRegistered == true),
+        "Combat log registration: deliberately disabled on Forever",
         "Loot source API: " .. tostring(api("GetLootSourceInfo")), "XP formats: " .. #G.Parser.xp,
         "Auctionator API v1: " .. tostring(Auctionator and Auctionator.API and Auctionator.API.v1 ~= nil or false),
         "In-game validation: pending (synthetic tests are separate).", "", "Event counts:"}

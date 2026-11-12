@@ -1,14 +1,15 @@
-Första testversionen av GrindMeter för WoW Forever, interface 16001.
+GrindMeter 0.1.1 för WoW Forever, interface 16001.
 
-- Minimapikon för att öppna/stänga UI, med dragposition och högerklick för mätpanelen.
-- Tre steg: välj mob, välj mättid och starta. Flyttbar kompakt panel med paus/fortsätt/stopp.
-- Kills/h, faktiskt erhållen mob-XP/h, plockade mynt och lootvärde som separata mått.
-- Riktiga itemlänkar/tooltips, vendorvärdering, valfritt Auctionator-API och lokal prisimport.
-- Delvis känd lootkatalog för 165 NPC-ID:n, egna observationer, historik och kopierbar diagnostik.
-- Svenska som standard och engelska som alternativ.
+Åtgärdar uppstartsmeddelandet **“GrindMeter has been blocked from an action only available to the Blizzard UI”** från version 0.1.0.
 
-**Installera bifogad `GrindMeter-0.1.0.zip`, inte GitHubs Source code-zip.** Packa upp mappen GrindMeter till `_forever_/Interface/AddOns/` och starta om spelet.
+- Registrerar eller läser aldrig den blockerade combatloggen.
+- Använder Forevers separata `PARTY_KILL(attackerGUID, targetGUID)` för killcredit. `UNIT_DIED` kan inte dubbelräkna en kill.
+- Samlar läsbara mobnamn från target, mouseover och namnplattor för XP-attribuering.
+- Bevarar konservativa regler för pets, gruppcredit, hemliga identiteter och okända källor.
+- Åtta nya regressionstester; totalt 54 Lua- och 3 Python-tester. Befintlig historik och inställningar behålls.
 
-**In-game-verifiering återstår.** Automatiska tester är syntetiska. Den medföljande katalogen är ofullständig och saknar bekräftat lootunderlag för Wildplains Huntress/Patriarch. Katalogens procentsiffror gäller lootfönster och används inte som killbaserad guldprognos. Auctionators verkliga event-/prisflöde och AH-avgiften ska provas i målklienten. Se README och docs/IN_GAME_TESTING.md.
+**Installera bifogad `GrindMeter-0.1.1.zip`.** Ersätt den tidigare `GrindMeter`-mappen i `_forever_/Interface/AddOns/` och kör `/reload`. Behåll SavedVariables. Om du valde att avaktivera GrindMeter i Blizzards ruta behöver du aktivera det igen i addonlistan.
+
+Den korrigerade versionen är automatiskt testad men ännu inte verifierad inne i WoW. Lootkatalog och AH-begränsningar kvarstår enligt README. Se docs/IN_GAME_TESTING.md för klienttest.
 
 Data from Everloot (https://everloot.app), CC BY-SA 4.0. Independently written addon code: MIT.

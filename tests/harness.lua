@@ -60,7 +60,15 @@ function Frame:HighlightText() end
 function Frame:SetScrollChild(child) self.scrollChild = child end
 function Frame:SetScript(event, fn) self.scripts[event] = fn end
 function Frame:GetScript(event) return self.scripts[event] end
-function Frame:RegisterEvent(event) self.events = self.events or {}; self.events[event] = true end
+function Frame:RegisterEvent(event)
+    H.registrationAttempts[#H.registrationAttempts + 1] = event
+    if H.blockedEvents[event] then
+        -- Blizzard can emit ADDON_ACTION_FORBIDDEN without throwing a Lua error.
+        H.forbiddenAttempts = H.forbiddenAttempts + 1
+        return true
+    end
+    self.events = self.events or {}; self.events[event] = true
+end
 function Frame:StartMoving() end
 function Frame:StopMovingOrSizing() end
 function Frame:Show() self.shown = true end
@@ -71,6 +79,9 @@ function Frame:GetCenter() return 1000, 100 end
 function Frame:Click(button) if self.enabled and self.scripts.OnClick then self.scripts.OnClick(self, button or "LeftButton") end end
 function H.setup(loadUI)
     H.clock = 0; H.frames = {}; H.items = {}; H.group = false; H.level = 38; H.xp = 100; H.xpMax = 10000
+    H.target = nil; H.requests = 0; H.inserted = nil; H.chat = nil; H.reference = nil
+    H.forbiddenAttempts = 0; H.registrationAttempts = {}
+    H.blockedEvents = {COMBAT_LOG_EVENT_UNFILTERED = true, COMBAT_LOG_EVENT = true}
     GrindMeterDB = nil; GrindMeterPriceData = nil; Auctionator = nil
     strsplit = function(separator, text)
         local values = {}; for value in (text .. separator):gmatch("(.-)" .. separator) do values[#values + 1] = value end
@@ -110,7 +121,7 @@ function H.setup(loadUI)
     C_Map = {GetBestMapForUnit = function() return 999 end}
     C_CombatLog = {IsCombatLogRestricted = function() return false end}
     C_AddOns = {GetAddOnMetadata = function() return "345" end}
-    CombatLogGetCurrentEventInfo = function() return 0 end
+    CombatLogGetCurrentEventInfo = nil -- unavailable in the target Forever client
     issecretvalue = function() return false end
     C_Item = {GetItemInfo = function(link)
         local data = H.items[tonumber(link:match("item:(%d+)"))]
@@ -139,7 +150,7 @@ function H.setup(loadUI)
             local fn, err = loadfile("GrindMeter/" .. line); assert(fn, err); fn("GrindMeter", G)
         end
     end
-    G.Parser:Initialize(_G); G.Client.combatRegistered = true
+    G.Parser:Initialize(_G); G.Client.killRegistered = true
     G.Storage:Initialize(G.Client:Context()); G.Trackers:Reset()
     return G
 end

@@ -11,9 +11,10 @@ Blizzards exporterade Forever-dokumentation har kontrollerats i [reckhou/WoWBlzC
 | Område | Val och konservativ gräns |
 |---|---|
 | NPC-identitet | Creature-/Vehicle-GUID, sjätte bindestrecksseparerade fältet. Namn är presentation. Target låses vid start. |
-| Kills | `COMBAT_LOG_EVENT_UNFILTERED` + `CombatLogGetCurrentEventInfo()`, endast `PARTY_KILL` från GUID i aktuell player-/pet-/party-/raid-roster eller säkert ägd summon. `UNIT_DIED` och skada räcker aldrig. |
+| Kills | Forevers **separata** `PARTY_KILL(attackerGUID, targetGUID)` med läsbart attacker-GUID i aktuell player-/pet-/party-/raid-roster. Ingen combatlog registreras eller läses. `UNIT_DIED` och skada räcker aldrig. Guardians utan läsbart rosterbevis gissas inte in. |
 | Gruppcredit | PARTY_KILL är creditbeviset; ett roster-GUID i en godtycklig skaderad är inte tillräckligt. Räknar spelarens XP/loot, inte gruppens sammanlagda belöningar. Gruppändringar märks. |
-| Restriktioner | `C_CombatLog.IsCombatLogRestricted()` när tillgänglig, eventregistrering via `pcall`, kontroll av `issecretvalue`, skyddad eventdispatch. Ingen upplåsning av hemliga värden, filterändring eller aktivering av extern combatlog. |
+| Restriktioner | Combatlogregistrering är borttagen: `pcall` förhindrar inte `ADDON_ACTION_FORBIDDEN`, och combatloggens restricted-status är inte ett registreringstillstånd. Tillåtna separata events registreras med kontroll av både Lua-fel och false-retur. `issecretvalue` kontrolleras innan GUID:n läses, jämförs eller används som nycklar. Inga försök att låsa upp hemliga värden. |
+| Mobnamn | Begränsad cache med publika GUID/namn-par från target, mouseover och namnplattor. Vid credit kan samma NPC-typs tidigare kända namn användas. Namnuppslag skapar aldrig killcredit. Saknas säker namnkandidat för XP förblir den oattribuerad. |
 | XP | `CHAT_MSG_COMBAT_XP_GAIN`, parser kompilerad från klientens egna `COMBATLOG_XPGAIN_*`-format. Ett namngivet mobmeddelandes totala erhållna XP används en gång. Chatteventets generella GUID används aldrig som mob-GUID. |
 | XP-koppling | Namn kan endast kopplas till en entydig NPC-typ bland säkra, ännu inte XP-matchade killkandidater inom ±1,25 sekunder. XP buffras 1,25 sekunder för omvänd eventordning. Samma namn på olika NPC-ID:n förblir osäkert. När individen är oklar men NPC-typen entydig summeras endast på typnivå. |
 | Annan XP | Namnlös XP, exempelvis quest-XP, går inte till mobräknarna. `PLAYER_XP_UPDATE`/`PLAYER_LEVEL_UP` ger separat kontrollsumma, inte mobbevis. Kontrollsumman hanterar ett levelsteg mellan avläsningar. |

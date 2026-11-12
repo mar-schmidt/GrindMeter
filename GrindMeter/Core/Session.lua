@@ -91,6 +91,7 @@ function S:Restore(now)
     session.state = "paused"; session.recovered = true
     session.collectionEpoch = (session.collectionEpoch or 0) + 1
     session.killRecords = {}; session.killOrder = {}; session.bodyObservations = session.bodyObservations or {}
+    session.killSource = "PARTY_KILL"; session.killAvailable = G.Client.killRegistered == true
     self.s = session; self.anchor = now; self.pauseAnchor = now
     if G.Trackers then G.Trackers:Reset() end
 end

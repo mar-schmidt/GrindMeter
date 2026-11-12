@@ -7,7 +7,7 @@ function T:ResetTransient()
     self.xpCheck = nil
 end
 function T:Reset()
-    self:ResetTransient(); self.observedBodies = {}; self.owned = {}; self.roster = {}
+    self:ResetTransient(); self.observedBodies = {}; self.roster = {}
     if G.Client then self:UpdateRoster() end
 end
 function T:Diagnostic(key)
@@ -25,7 +25,8 @@ end
 function T:UpdateRoster()
     local roster = {}
     local function add(unit)
-        local guid = UnitGUID(unit); if guid then roster[guid] = true end
+        local guid = UnitGUID(unit)
+        if (not issecretvalue or not issecretvalue(guid)) and type(guid) == "string" then roster[guid] = true end
     end
     add("player"); add("pet"); add("vehicle")
     for i = 1, 4 do add("party" .. i); add("partypet" .. i) end
@@ -40,7 +41,7 @@ function T:Credit(guid, name, sourceGUID, now, evidence)
     if not G.Session:Collecting(now) then return false end
     local s = G.Session.s; local npcID = G.NpcID(guid)
     if not npcID then return false end
-    if evidence ~= "PARTY_KILL" or not (self.roster[sourceGUID] or self.owned[sourceGUID]) then
+    if evidence ~= "PARTY_KILL" or not self.roster[sourceGUID] then
         self:Diagnostic("unconfirmedCredit"); return false
     end
     if s.killRecords[guid] then return false end
@@ -53,17 +54,6 @@ function T:Credit(guid, name, sourceGUID, now, evidence)
     G.Session:Counter(npcID, name).kills = G.Session:Counter(npcID, name).kills + 1
     s.killAvailable = true; self:Diagnostic("confirmedKills")
     return true
-end
-function T:Combat(event, sourceGUID, destGUID, destName, now)
-    if not G.Session:Collecting(now) then return end
-    if event == "SPELL_SUMMON" and (self.roster[sourceGUID] or self.owned[sourceGUID]) then
-        self.owned[destGUID] = true
-    elseif event == "PARTY_KILL" then
-        self:Credit(destGUID, destName, sourceGUID, now, event)
-    elseif event == "UNIT_DIED" then
-        -- A death (or damage on somebody else's tag) is never proof of the player's kill.
-        self:Diagnostic("deathEvents")
-    end
 end
 function T:XP(message, lineID, now)
     if not G.Session:Collecting(now) or not self:Unique("xp", lineID) then return end

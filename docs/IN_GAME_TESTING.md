@@ -8,10 +8,10 @@ Installera testreleasen. Använd `/gm diagnostics` före och efter ett kort pass
 |---|---|---|
 | 1 | Addonet laddas med interface 16001. Minimapikon och `/gm` öppnar samma fönster utan Lua-fel. | Ej speltestat |
 | 2 | Välj en mob; NPC-ID stämmer. Byt target; huvudmobben ändras inte. | Ej speltestat |
-| 3 | Döda en egen mob; PARTY_KILL-credit registreras en gång. Kontrollera manuell killräkning. | Ej speltestat |
+| 3 | Döda en egen mob; separata PARTY_KILL-eventets attackerGUID/targetGUID ger en credit. UNIT_DIED får ingen extra. Kontrollera manuell killräkning. | Ej speltestat |
 | 4 | Andra spelare dödar mobbar nära dig. Skada även en annans tag. Ingen säker credit ska skapas för dessa. | Ej speltestat |
-| 5 | Pet/summon och gruppmedlem ger sista slaget på gruppens mob. Kontrollera exakt en credit och spelarens personliga XP/loot. | Ej speltestat |
-| 6 | Kontrollera att killdata är läsbar i Forever, även i strid. Begränsningar ska ge tydligt okänt/delvärde utan försök att kringgå dem. | Ej speltestat |
+| 5 | Pet och gruppmedlem ger sista slaget på gruppens mob. Kontrollera exakt en credit och spelarens personliga XP/loot. | Ej speltestat |
+| 6 | Uppstart/reload utan blockeringsruta. Ingen combatlogregistrering görs. Kontrollera att separata kill-event är läsbara i Forever, även i strid. Begränsningar ska ge tydligt okänt/delvärde utan försök att kringgå dem. | Ej speltestat |
 | 7 | Jämför XP-meddelanden med faktiska XP-förändringar; prova rested, gruppbonus, quest mellan kills och level up. | Ej speltestat |
 | 8 | Manuell loot och autoloot. Kontrollera full itempayload, stackantal, source-GUID och kvittotid. | Ej speltestat |
 | 9 | Fulla väskor, delvis uttagen stack och återöppnad kropp. Ingen extra receipt eller falsk drop-nämnare. | Ej speltestat |
